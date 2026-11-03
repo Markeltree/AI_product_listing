@@ -201,7 +201,7 @@ const bothLive = (l) => isLive(l.etsy) && isLive(l.ebay) && l.ebay?.offerId;
 export async function runSync({ userId = null } = {}) {
   const listings = userId
     ? (await store.listListings(userId)).filter((l) => l.status === LISTING_STATUS.PUBLISHED)
-    : await store.listPublishedListings();
+    : await store.listListingsByStatus(LISTING_STATUS.PUBLISHED);
   const results = [];
   for (const listing of listings.filter(bothLive)) {
     try {

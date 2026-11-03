@@ -68,9 +68,9 @@ export class SupabaseStore {
     await this.query('deleteListing', this.table('listings').delete().eq('id', id).eq('user_id', userId));
   }
 
-  // Every user's published listings (for the cross-marketplace sync).
-  async listPublishedListings() {
-    const data = await this.query('listPublishedListings', this.table('listings').select('data').eq('status', 'published'));
+  // Every user's listings in one status (sync: 'published'; startup recovery: 'generating').
+  async listListingsByStatus(status) {
+    const data = await this.query('listListingsByStatus', this.table('listings').select('data').eq('status', status));
     return (data || []).map(toListing);
   }
 

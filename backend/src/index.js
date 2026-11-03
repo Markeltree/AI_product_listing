@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { createApp } from './app.js';
 import { config, integrations } from './config/index.js';
 import { initStore } from './db/index.js';
+import { resumeInterruptedGenerations } from './services/generation.service.js';
 import { startSyncLoop } from './services/marketplace.service.js';
 
 export const app = createApp();
@@ -12,6 +13,7 @@ export async function start() {
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.mkdirSync(config.uploadDir, { recursive: true });
   await initStore();
+  await resumeInterruptedGenerations().catch((err) => console.error('[generation] resume failed:', err));
   startSyncLoop();
   return app.listen(config.port, () => {
     console.log(`Velista Listing AI running at ${config.appUrl}`);

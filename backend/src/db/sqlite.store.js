@@ -120,9 +120,9 @@ export class SqliteStore {
   async deleteListing(userId, id) {
     this.run('DELETE FROM listings WHERE id = ? AND user_id = ?', id, userId);
   }
-  // Every user's published listings (for the cross-marketplace sync).
-  async listPublishedListings() {
-    return this.all("SELECT data FROM listings WHERE status = 'published'").map(toListing);
+  // Every user's listings in one status (sync: 'published'; startup recovery: 'generating').
+  async listListingsByStatus(status) {
+    return this.all('SELECT data FROM listings WHERE status = ?', status).map(toListing);
   }
 
   // ---------- Etsy connections ----------

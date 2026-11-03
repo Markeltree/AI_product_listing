@@ -2,11 +2,23 @@
 // Runs inside the server process; progress is written to listing.step so clients can poll it.
 import path from 'node:path';
 import { config } from '../config/index.js';
+import { store } from '../db/index.js';
 import { LISTING_STATUS } from '../config/constants.js';
 import { extractVideoFrames, generateContent, transcribeAudio } from './ai/index.js';
 import { hydrate, listingDir } from './media.service.js';
 import { findListing, updateListing } from './listing.repository.js';
 import { getUserSettings } from './settings.service.js';
+
+// Generation runs inside the server process, so a restart or deploy in the middle of one would leave the
+// listing stuck on "generating". Called at startup to run those again.
+export async function resumeInterruptedGenerations() {
+  const stuck = await store.listListingsByStatus(LISTING_STATUS.GENERATING);
+  for (const l of stuck) {
+    console.log(`[generation] resuming ${l.id} (interrupted by a restart)`);
+    startGeneration(l.userId, l.id);
+  }
+  return stuck.length;
+}
 
 // Fire and forget. Errors are recorded on the listing by runGeneration, so this only logs the unexpected.
 export function startGeneration(userId, listingId) {
