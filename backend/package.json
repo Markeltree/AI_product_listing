@@ -1,0 +1,28 @@
+{
+  "name": "velista-listing-ai",
+  "version": "1.0.0",
+  "description": "AI-powered Etsy listing generator with direct Etsy Open API v3 publishing",
+  "private": true,
+  "type": "module",
+  "main": "src/index.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "test": "node --test test/unit.test.js",
+    "etsy:invite": "node src/scripts/etsy-invite.js",
+    "test:crosslist": "node test/crosslist-e2e.mjs",
+    "mock:etsy": "node test/mock-etsy/server.mjs",
+    "dev:mock": "node test/mock-etsy/dev.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
+    "multer": "^2.5.0"
+  }
+}

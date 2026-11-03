@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Secrets: never commit real keys (the .env.example files are committed instead)
+.env
+.env.*
+!.env.example
+
+# Backend runtime data (local SQLite, uploaded photos/videos)
+backend/data/
+backend/uploads/
+
+# Expo / React Native build output
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/expo-env.d.ts
+mobile/android/
+mobile/ios/
+
+# Local tool settings
+.claude/
+.vscode/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
