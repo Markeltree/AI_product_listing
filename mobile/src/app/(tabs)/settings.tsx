@@ -5,7 +5,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { parse as parseUrl } from 'expo-linking';
 import { useFocusEffect } from 'expo-router';
 import { api } from '@/lib/api';
-import { API_URL, SETTINGS_RETURN } from '@/lib/config';
+import { API_URL, SETTINGS_RETURN, USING_LOCAL_SERVER } from '@/lib/config';
 import { useAuth } from '@/lib/auth';
 import { LANGUAGES, MAX_QUANTITY, TONES, WHEN_MADE, WHO_MADE } from '@/lib/rules';
 import type { EtsyStatus, Settings, ShippingProfile, Tone } from '@/lib/types';
@@ -238,6 +238,9 @@ export default function SettingsScreen() {
         <CardHeader icon="sparkles-outline" title="AI and services" />
         <KeyValue k="Listing AI" v={ai ? (ai.provider === 'template' ? 'Template only (no AI key on the server)' : `${ai.provider}${ai.model ? ` · ${ai.model}` : ''}`) : 'Checking…'} />
         <KeyValue k="Server" v={API_URL} />
+        {USING_LOCAL_SERVER ? (
+          <Banner tone="warn" text="This app is using a development server on a computer, not the live Velista server. Remove EXPO_PUBLIC_API_URL from mobile/.env and restart Expo with: npx expo start -c" />
+        ) : null}
       </Card>
 
       <View style={{ height: space.md }} />

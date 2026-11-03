@@ -3,7 +3,7 @@ import { Platform } from 'react-native';
 
 const DEV_SERVER_PORT = 3000;
 
-// In development the app is loaded from Metro on your computer, so Metro's host (hostUri, e.g.
+// Local development only (EXPO_PUBLIC_API_URL=local): the app is loaded from Metro on your computer, so Metro's host (hostUri, e.g.
 // "192.168.1.20:8081") is also where the Velista server runs. On a phone or emulator, "localhost" is
 // the device itself, so it can never reach the server. Tunnel hosts (not an IP) cannot be used.
 function devServerUrl(): string {
@@ -14,9 +14,24 @@ function devServerUrl(): string {
   return `http://localhost:${DEV_SERVER_PORT}`;
 }
 
-// Backend URL. EXPO_PUBLIC_API_URL in mobile/.env always wins (required for production builds);
-// otherwise it is worked out from the development machine as above.
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL || devServerUrl()).replace(/\/$/, '');
+// The deployed Velista API (Railway). The app uses it unless told otherwise, so a phone never ends up
+// on a stale server running on someone's computer.
+export const DEPLOYED_API_URL = 'https://aiproductlisting-production.up.railway.app';
+
+// Backend URL:
+// - EXPO_PUBLIC_API_URL unset           -> the deployed API (default)
+// - EXPO_PUBLIC_API_URL=local           -> the Velista server on the computer running Expo (see above)
+// - EXPO_PUBLIC_API_URL=https://...     -> that address
+// Restart Expo with `npx expo start -c` after changing mobile/.env.
+function resolveApiUrl(): string {
+  const configured = (process.env.EXPO_PUBLIC_API_URL || '').trim();
+  if (!configured) return DEPLOYED_API_URL;
+  if (configured.toLowerCase() === 'local') return devServerUrl();
+  return configured;
+}
+
+export const API_URL = resolveApiUrl().replace(/\/$/, '');
+export const USING_LOCAL_SERVER = !API_URL.startsWith('https://');
 
 export const APP_SCHEME = 'velista';
 export const SETTINGS_RETURN = `${APP_SCHEME}://settings`;
