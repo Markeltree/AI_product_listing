@@ -1,5 +1,3 @@
-// Local file database (node:sqlite, built in on Node 22.13+). Used for development and offline use.
-// Same async API as SupabaseStore. Keep the schema in step with supabase/schema.sql.
 import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';

@@ -93,6 +93,8 @@ export const config = {
   // Redis (optional). When set, generation and the cross-delist sync run on BullMQ queues and rate-limit
   // counters are shared between servers. Railway: use the Redis service's REDIS_URL reference variable.
   redisUrl: process.env.REDIS_URL || '',
+  // Key prefix for the BullMQ queues, so several environments can share one Redis.
+  queuePrefix: process.env.QUEUE_PREFIX || 'velista',
   // Listings written at the same time by one server (each is one AI call).
   generationConcurrency: Math.max(1, Number(process.env.GENERATION_CONCURRENCY || 2)),
 

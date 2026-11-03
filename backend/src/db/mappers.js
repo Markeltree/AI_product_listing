@@ -1,9 +1,4 @@
-// Convert between database rows (snake_case) and app objects (camelCase). Shared by both stores.
-// Listings are stored as one JSON document plus indexed columns (status, title, updated_at).
-
 const parseJson = (value, fallback) => (typeof value === 'string' ? JSON.parse(value || 'null') ?? fallback : value ?? fallback);
-
-// ---------- row -> app object ----------
 
 export const toUser = (r) =>
   r && {

@@ -1,5 +1,3 @@
-// Supabase (Postgres) backend. Used when SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.
-// Same async API as SqliteStore.
 import { OAUTH_STATE_TTL_MS } from '../config/constants.js';
 import { HttpError } from '../utils/errors.js';
 import {

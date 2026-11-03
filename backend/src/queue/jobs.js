@@ -21,7 +21,7 @@ const queues = {};
 const workers = [];
 
 function queue(name) {
-  queues[name] ||= new Queue(name, { connection: redis() });
+  queues[name] ||= new Queue(name, { connection: redis(), prefix: config.queuePrefix });
   return queues[name];
 }
 
@@ -65,9 +65,9 @@ function startWorkers() {
   const generation = new Worker(GENERATION, async (job) => {
     const { userId, listingId } = job.data;
     await runGeneration(userId, listingId, { finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts || 1) });
-  }, { connection: redis(), concurrency: config.generationConcurrency });
+  }, { connection: redis(), prefix: config.queuePrefix, concurrency: config.generationConcurrency });
 
-  const sync = new Worker(SYNC, async () => runSync(), { connection: redis(), concurrency: 1 });
+  const sync = new Worker(SYNC, async () => runSync(), { connection: redis(), prefix: config.queuePrefix, concurrency: 1 });
 
   for (const w of [generation, sync]) {
     w.on('failed', (job, err) => console.error(`[queue] ${w.name} job ${job?.id} failed (attempt ${job?.attemptsMade}):`, err.message));
