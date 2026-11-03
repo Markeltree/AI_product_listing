@@ -103,10 +103,19 @@ test/
   mock-etsy/, mock-ebay/   Local stand-ins for the marketplace APIs
 ```
 
+## Security
+
+| Layer | Where | What it does |
+|---|---|---|
+| Secure headers | `src/middleware/security.js` | Helmet: CSP `default-src 'none'`, HSTS, nosniff, frame and referrer protection; API responses are `Cache-Control: no-store`. |
+| Rate limits | `src/middleware/rateLimit.js` | Whole API 1000/min per IP; failed sign-ins 10 per 15 min per IP and email; sign-ups 5/hour per IP; AI calls 60/hour per user; Etsy/eBay actions 60 per 10 min per user; "Check sales now" 6/min. Uses the real client IP behind Railway (`TRUST_PROXY`). |
+| Input validation | `src/validators/schemas.js`, `src/middleware/validate.js` | zod schemas for every JSON body, query and URL id: types, lengths, allowed values; unknown keys dropped. Bad ids return 404 before touching the database. |
+| XSS | `src/utils/text.js` | HTML tags, script blocks and control characters are stripped from all stored text; eBay HTML descriptions are escaped; the one HTML page escapes everything it prints. |
+
 ## Tests
 
 ```bash
-npm test                  # unit tests
+npm test                  # unit tests + security tests (headers, validation, XSS, rate limits)
 npm run test:crosslist    # end-to-end Etsy + eBay flow against the mocks, in a throwaway database
 ```
 

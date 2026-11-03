@@ -45,7 +45,8 @@ const upload = multer({
     },
   }),
   // Per-field size limits are checked afterwards by checkSizes(); this is the hard ceiling.
-  limits: { fileSize: MAX_VIDEO_BYTES, files: Math.max(MAX_IMAGES + 2, MAX_BULK_IMAGES) },
+  // fieldSize caps the text fields (the product JSON) so a form cannot carry megabytes of text.
+  limits: { fileSize: MAX_VIDEO_BYTES, files: Math.max(MAX_IMAGES + 2, MAX_BULK_IMAGES), fieldSize: 64 * 1024, fields: 10 },
   fileFilter(_req, file, cb) {
     const rule = FIELD_RULES[file.fieldname];
     if (rule?.accepts(file)) return cb(null, true);

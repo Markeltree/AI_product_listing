@@ -25,6 +25,10 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
   sessionMaxAgeMs: 1000 * 60 * 60 * 24 * 14,
 
+  // Proxies in front of the server whose X-Forwarded-For can be trusted for the client IP (rate limits).
+  // Railway has one. Set TRUST_PROXY=0 when the server is reached directly.
+  trustProxy: Number(process.env.TRUST_PROXY ?? 1),
+
   // Origins allowed to call the API from a browser (for example the Expo web preview). Native apps do not need it.
   corsOrigins: list(process.env.CORS_ORIGINS),
 

@@ -4,7 +4,7 @@ import {
   DEFAULT_SETTINGS, DESCRIPTION_MAX, LANGUAGES, TAG_MAX_COUNT, TAG_MAX_LENGTH, TITLE_MAX, TONES, WHEN_MADE, WHO_MADE,
 } from '../config/constants.js';
 import { toIntOrNull, toNumberOrNull } from '../utils/parse.js';
-import { clean, splitList } from '../utils/text.js';
+import { clean, cleanMultiline, splitList } from '../utils/text.js';
 
 const TAG_DISALLOWED = /[^\p{L}\p{N} '\-]/gu;
 
@@ -38,7 +38,7 @@ export function sanitizeContent(input = {}, fallback = {}) {
   const price = Number(input.suggestedPrice);
   return {
     title: clean(input.title, TITLE_MAX) || clean(fallback.title, TITLE_MAX),
-    description: String(input.description ?? fallback.description ?? '').trim().slice(0, DESCRIPTION_MAX),
+    description: cleanMultiline(input.description ?? fallback.description ?? '', DESCRIPTION_MAX),
     tags: sanitizeTags(input.tags !== undefined ? input.tags : fallback.tags),
     category: clean(input.category, 200) || clean(fallback.category, 200),
     attributes: sanitizeAttributes(input.attributes !== undefined ? input.attributes : fallback.attributes),

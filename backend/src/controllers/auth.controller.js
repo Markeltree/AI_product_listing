@@ -1,6 +1,5 @@
 import * as authService from '../services/auth.service.js';
 import { createSessionToken } from '../utils/session.js';
-import { readLogin, validateSignup } from '../validators/auth.validator.js';
 
 // The app stores the returned token and sends it as a Bearer header.
 function sendSession(res, status, user) {
@@ -8,12 +7,12 @@ function sendSession(res, status, user) {
 }
 
 export async function signup(req, res) {
-  const user = await authService.signup(validateSignup(req.body));
+  const user = await authService.signup(req.body); // validated by signupBody
   sendSession(res, 201, user);
 }
 
 export async function login(req, res) {
-  const user = await authService.login(readLogin(req.body));
+  const user = await authService.login(req.body); // validated by loginBody
   sendSession(res, 200, user);
 }
 
