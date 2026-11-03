@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font, glow, radius, shadow, space } from '@/theme';
+import { TAB_BAR_SPACE, colors, font, glow, radius, shadow, space } from '@/theme';
 import { STATUS_LABEL } from '@/lib/format';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -15,7 +15,7 @@ export function Screen({
 }: { children: React.ReactNode; scroll?: boolean; edges?: Edge[]; padded?: boolean; style?: StyleProp<ViewStyle> }) {
   const body = scroll ? (
     <ScrollView
-      contentContainerStyle={[padded && styles.pad, { paddingBottom: space.xxl * 2 }]}
+      contentContainerStyle={[padded && styles.pad, { paddingBottom: TAB_BAR_SPACE + space.lg }]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >

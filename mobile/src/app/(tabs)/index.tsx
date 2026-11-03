@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, Text, TextInput, View,
+  ActivityIndicator, Alert, FlatList, Linking, Pressable, RefreshControl, Text, View,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,14 +9,15 @@ import { api, mediaUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { money, timeAgo } from '@/lib/format';
 import type { ListingSummary } from '@/lib/types';
-import { Banner, Button, Empty, Heading, IconButton, Row, Screen, Segmented, StatusBadge } from '@/components/ui';
-import { colors, font, radius, shadow, space } from '@/theme';
+import { Banner, Button, Empty, IconButton, Row, Screen, Segmented, StatusBadge } from '@/components/ui';
+import { HomeHeader } from '@/components/HomeHeader';
+import { TAB_BAR_SPACE, colors, font, radius, shadow, space } from '@/theme';
 
 type Filter = 'all' | 'draft' | 'published' | 'ended' | 'failed' | 'generating';
 
 export default function ListingsScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [items, setItems] = useState<ListingSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -90,32 +91,21 @@ export default function ListingsScreen() {
 
   const header = (
     <View style={{ gap: space.md + 2 }}>
-      <Heading
-        eyebrow="Velista"
-        title="Listings"
-        subtitle={items ? `${items.length} listing${items.length === 1 ? '' : 's'} in your library` : 'Loading your listings…'}
-        right={<Button title="New" icon="add" onPress={() => router.push('/new')} style={{ minHeight: 42, paddingHorizontal: 16 }} />}
+      <HomeHeader
+        name={user?.name ?? ''}
+        total={items ? items.length : null}
+        live={counts.published}
+        drafts={counts.draft}
+        needsAttention={counts.failed}
+        query={query}
+        onQuery={setQuery}
+        onNew={() => router.push('/new')}
       />
       {error ? <Banner tone="error" text={error} action={{ label: 'Try again', onPress: load }} /> : null}
-      <View style={{ flexDirection: 'row', backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.line, paddingVertical: 14, ...shadow }}>
-        <Stat label="Drafts" value={counts.draft} tone="accent" icon="create-outline" />
-        <View style={{ width: 1, backgroundColor: colors.line }} />
-        <Stat label="Published" value={counts.published} tone="ok" icon="storefront-outline" />
-        <View style={{ width: 1, backgroundColor: colors.line }} />
-        <Stat label="Attention" value={counts.failed} tone="danger" icon="alert-circle-outline" />
-      </View>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.line, paddingHorizontal: 14 }}>
-        <Ionicons name="search" size={18} color={colors.muted} />
-        <TextInput
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Search by title"
-          placeholderTextColor={colors.placeholder}
-          style={{ flex: 1, height: 48, fontSize: 15, color: colors.ink }}
-          accessibilityLabel="Search listings"
-          clearButtonMode="while-editing"
-        />
-      </View>
+      <Row style={{ justifyContent: 'space-between', marginTop: 4 }}>
+        <Text style={{ fontSize: 19, fontWeight: '800', color: colors.ink, letterSpacing: -0.3 }}>Your library</Text>
+        <Text style={{ fontSize: 13, fontWeight: '700', color: colors.accentDark }}>{visible.length} shown</Text>
+      </Row>
       <Segmented<Filter>
         value={filter}
         onChange={setFilter}
@@ -133,7 +123,7 @@ export default function ListingsScreen() {
 
   if (items === null && !error) {
     return (
-      <Screen scroll={false}>
+      <Screen scroll={false} edges={[]}>
         {header}
         <View style={{ paddingTop: 40 }}><ActivityIndicator color={colors.accent} /></View>
       </Screen>
@@ -141,11 +131,11 @@ export default function ListingsScreen() {
   }
 
   return (
-    <Screen scroll={false} padded={false}>
+    <Screen scroll={false} padded={false} edges={[]}>
       <FlatList
         data={visible}
         keyExtractor={(i) => i.id}
-        contentContainerStyle={{ paddingHorizontal: space.lg + 2, paddingBottom: 120, gap: 10, paddingTop: space.lg }}
+        contentContainerStyle={{ paddingHorizontal: space.lg + 2, paddingBottom: TAB_BAR_SPACE + 16, gap: 10 }}
         ListHeaderComponent={header}
         ListHeaderComponentStyle={{ marginBottom: 6 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.accent} />}
@@ -170,23 +160,6 @@ export default function ListingsScreen() {
   );
 }
 
-function Stat({ label, value, tone, icon }: {
-  label: string; value: number; tone: 'accent' | 'ok' | 'danger'; icon: keyof typeof Ionicons.glyphMap;
-}) {
-  const fg = { accent: colors.accentDark, ok: colors.okDark, danger: colors.dangerDark }[tone];
-  const bg = { accent: colors.accent50, ok: colors.ok50, danger: colors.danger50 }[tone];
-  return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 6 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-        <View style={{ width: 24, height: 24, borderRadius: 8, backgroundColor: bg, alignItems: 'center', justifyContent: 'center' }}>
-          <Ionicons name={icon} size={13} color={fg} />
-        </View>
-        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.ink, fontVariant: ['tabular-nums'], letterSpacing: -0.4 }}>{value}</Text>
-      </View>
-      <Text style={{ fontSize: 12, color: colors.muted, fontWeight: '600' }}>{label}</Text>
-    </View>
-  );
-}
 
 // One listing as a compact row: thumbnail, title, price and status, with open/delete actions.
 function ListingCard({ item, token, onOpen, onDelete }: {

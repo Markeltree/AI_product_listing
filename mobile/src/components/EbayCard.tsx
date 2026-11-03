@@ -1,9 +1,10 @@
 // Settings card for eBay: connect / disconnect and the one-time listing setup
 // (shipping, payment and return policies, ship-from location, item condition).
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { parse as parseUrl } from 'expo-linking';
+import { useFocusEffect } from 'expo-router';
 import { api } from '@/lib/api';
 import { SETTINGS_RETURN } from '@/lib/config';
 import type { EbayPrefs, EbaySetup, EbayStatus } from '@/lib/types';
@@ -17,7 +18,8 @@ const NEW_LOCATION = '__new';
 
 type Notice = { tone: 'success' | 'error' | 'warn'; text: string };
 
-export function EbayCard({ onNotice, refreshKey }: { onNotice: (n: Notice) => void; refreshKey: number }) {
+// Reloads every time the Settings screen comes into focus.
+export function EbayCard({ onNotice }: { onNotice: (n: Notice) => void }) {
   const [status, setStatus] = useState<EbayStatus | null>(null);
   const [setup, setSetup] = useState<EbaySetup | null>(null);
   const [prefs, setPrefs] = useState<EbayPrefs>({});
@@ -41,7 +43,7 @@ export function EbayCard({ onNotice, refreshKey }: { onNotice: (n: Notice) => vo
     }
   }, [onNotice]);
 
-  useEffect(() => { load(); }, [load, refreshKey]);
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
   // Same flow as Etsy: a short-lived ticket link, finished in the system browser.
   const connect = async () => {

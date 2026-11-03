@@ -23,7 +23,6 @@ export default function SettingsScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [banner, setBanner] = useState<{ tone: 'success' | 'error' | 'warn'; text: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
-  const [focusCount, setFocusCount] = useState(0);
 
   const loadEtsy = useCallback(async () => {
     try {
@@ -46,7 +45,6 @@ export default function SettingsScreen() {
 
   useFocusEffect(useCallback(() => {
     loadEtsy();
-    setFocusCount((n) => n + 1);
     api<{ settings: Settings }>('/api/settings').then((d) => setSettings(d.settings)).catch(() => {});
     api<{ ai: { provider: string; model: string | null } }>('/api/health').then((d) => setAi(d.ai)).catch(() => {});
   }, [loadEtsy]));
@@ -193,7 +191,7 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={{ height: space.md }} />
-      <EbayCard onNotice={setBanner} refreshKey={focusCount} />
+      <EbayCard onNotice={setBanner} />
 
       <View style={{ height: space.md }} />
       <Card>
