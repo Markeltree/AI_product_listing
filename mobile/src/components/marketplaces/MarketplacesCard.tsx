@@ -1,5 +1,3 @@
-// Listing screen card: where the listing is live (Etsy, eBay), publishing to eBay, ending listings,
-// and the cross-delist status (a sale or end on one marketplace ends the other).
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, Linking, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,7 +5,10 @@ import { useRouter } from 'expo-router';
 import { api, ApiError } from '@/lib/api';
 import { timeAgo } from '@/lib/format';
 import type { EbayStatus, Listing } from '@/lib/types';
-import { Banner, Button, Card, CardHeader, Row } from './ui';
+import {
+  Banner, Button, Card, CardHeader, Pill, Row,
+} from '@/components/ui';
+import { MARKETPLACES, MarketplaceMark, type Marketplace } from './MarketplaceMark';
 import { colors, font, radius } from '@/theme';
 
 type Info = { listingId?: string | number | null; offerId?: string; url?: string | null; state?: string; publishedAt?: string | null } | null | undefined;
@@ -20,14 +21,13 @@ function stateOf(info: Info): { label: string; live: boolean } {
   return { label: info.state === 'ended' ? 'Ended' : 'Draft', live: false };
 }
 
-function ChannelRow({ name, color, letter, info, note }: { name: string; color: string; letter: string; info: Info; note?: string | null }) {
+function ChannelRow({ marketplace, info, note }: { marketplace: Marketplace; info: Info; note?: string | null }) {
   const st = stateOf(info);
+  const { name } = MARKETPLACES[marketplace];
   return (
     <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start', backgroundColor: colors.surface2, padding: 12, borderRadius: radius.md }}>
       <Row style={{ flex: 1, alignItems: 'flex-start' }}>
-        <View style={{ width: 30, height: 30, borderRadius: 9, backgroundColor: color, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '800' }}>{letter}</Text>
-        </View>
+        <MarketplaceMark marketplace={marketplace} size={30} />
         <View style={{ flex: 1 }}>
           <Text style={{ fontWeight: '600', color: colors.ink }}>{name}</Text>
           {note ? <Text style={font.small}>{note}</Text> : null}
@@ -36,9 +36,7 @@ function ChannelRow({ name, color, letter, info, note }: { name: string; color: 
           ) : null}
         </View>
       </Row>
-      <View style={{ paddingHorizontal: 10, height: 24, borderRadius: 999, justifyContent: 'center', backgroundColor: st.live ? colors.ok50 : colors.surface3 }}>
-        <Text style={{ fontSize: 12, fontWeight: '700', color: st.live ? colors.okDark : colors.muted }}>{st.label}</Text>
-      </View>
+      <Pill label={st.label} tone={st.live ? 'success' : 'neutral'} />
     </Row>
   );
 }
@@ -131,8 +129,8 @@ export function MarketplacesCard({ listing, onListing, saveFirst }: {
   return (
     <Card>
       <CardHeader icon="git-branch-outline" title="Marketplaces" subtitle="Sell on Etsy and eBay. When it sells on one, Velista ends the other." />
-      <ChannelRow name="Etsy" color="#F1641E" letter="E" info={listing.etsy as Info} note={listing.etsy ? null : 'Use Publish to Etsy below.'} />
-      <ChannelRow name="eBay" color="#0064D2" letter="e" info={listing.ebay as Info} note={ebayNote} />
+      <ChannelRow marketplace="etsy" info={listing.etsy as Info} note={listing.etsy ? null : 'Use Publish to Etsy below.'} />
+      <ChannelRow marketplace="ebay" info={listing.ebay as Info} note={ebayNote} />
 
       {ebay?.connected && !ebay.ready ? (
         <Button title="Finish eBay setup" variant="secondary" icon="settings-outline" onPress={() => router.push('/(tabs)/settings')} full />

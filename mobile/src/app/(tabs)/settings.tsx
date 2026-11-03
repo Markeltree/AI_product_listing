@@ -1,4 +1,3 @@
-import { Ionicons } from '@expo/vector-icons';
 import React, { useCallback, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
@@ -9,9 +8,12 @@ import { API_URL, SETTINGS_RETURN, USING_LOCAL_SERVER } from '@/lib/config';
 import { useAuth } from '@/lib/auth';
 import { LANGUAGES, MAX_QUANTITY, TONES, WHEN_MADE, WHO_MADE } from '@/lib/rules';
 import type { EtsyStatus, Settings, ShippingProfile, Tone } from '@/lib/types';
-import { Banner, Button, Card, CardHeader, Field, Heading, Row, Screen, Segmented, Select, SwitchRow } from '@/components/ui';
-import { EbayCard } from '@/components/EbayCard';
-import { colors, font, radius, space } from '@/theme';
+import {
+  Banner, Button, Card, CardHeader, Field, Heading, KeyValueRow, Screen, Segmented, Select, SwitchRow,
+} from '@/components/ui';
+import { EbayCard } from '@/components/marketplaces/EbayCard';
+import { EtsyCard } from '@/components/marketplaces/EtsyCard';
+import { font, space } from '@/theme';
 
 export default function SettingsScreen() {
   const { user, signOut, updateUser } = useAuth();
@@ -143,52 +145,7 @@ export default function SettingsScreen() {
       <Heading eyebrow="Velista" title="Settings" subtitle="Connect Etsy and eBay, set defaults and manage your account." />
       {banner ? <View style={{ marginBottom: space.md }}><Banner tone={banner.tone === 'warn' ? 'warn' : banner.tone === 'success' ? 'success' : 'error'} text={banner.text} /></View> : null}
 
-      <Card>
-        <Row style={{ justifyContent: 'space-between' }}>
-          <Row style={{ gap: 10 }}>
-            <View style={{ width: 32, height: 32, borderRadius: 10, backgroundColor: colors.accent50, alignItems: 'center', justifyContent: 'center' }}>
-              <Ionicons name="storefront-outline" size={17} color={colors.accentDark} />
-            </View>
-            <Text style={font.h2}>Etsy shop</Text>
-          </Row>
-          <View style={{ paddingHorizontal: 10, height: 26, borderRadius: 999, justifyContent: 'center', backgroundColor: connected ? colors.ok50 : colors.surface3 }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: connected ? colors.okDark : colors.muted }}>
-              {!etsy ? 'Checking…' : !etsy.configured ? 'Not configured' : connected ? 'Connected' : etsy.connected ? 'No shop found' : 'Not connected'}
-            </Text>
-          </View>
-        </Row>
-        {etsy && !etsy.configured ? (
-          <Banner tone="warn" text="The server has no Etsy API key yet. Add ETSY_API_KEY to its .env file and restart it." />
-        ) : null}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line }}>
-          <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: '#F1641E', alignItems: 'center', justifyContent: 'center' }}>
-            <Text style={{ color: '#fff', fontWeight: '800', fontSize: 19 }}>E</Text>
-          </View>
-          <View style={{ flex: 1 }}>
-            <Text style={{ fontWeight: '600', color: colors.ink }} numberOfLines={1}>
-              {connected ? etsy?.shopName ?? 'Your Etsy shop' : 'No shop connected'}
-            </Text>
-            <Text style={font.small}>
-              {connected ? `Shop ID ${etsy?.shopId}` : 'Connect to publish listings straight from your phone.'}
-            </Text>
-          </View>
-        </View>
-        {connected ? (
-          <View style={{ flexDirection: 'row', gap: 10, flexWrap: 'wrap' }}>
-            <Button title="Refresh shop" variant="secondary" icon="refresh" onPress={refreshShop} loading={busy === 'refresh'} style={{ flex: 1, paddingHorizontal: 10 }} />
-            <Button title="Disconnect" variant="danger" icon="unlink" onPress={disconnect} style={{ flex: 1, paddingHorizontal: 10 }} />
-          </View>
-        ) : (
-          <Button
-            title={etsy?.connected ? 'Reconnect Etsy' : 'Connect Etsy'}
-            icon="link"
-            onPress={connectEtsy}
-            loading={busy === 'connect'}
-            disabled={!etsy?.configured}
-            full
-          />
-        )}
-      </Card>
+      <EtsyCard etsy={etsy} busy={busy} onConnect={connectEtsy} onRefresh={refreshShop} onDisconnect={disconnect} />
 
       <View style={{ height: space.md }} />
       <EbayCard onNotice={setBanner} />
@@ -234,8 +191,8 @@ export default function SettingsScreen() {
       <View style={{ height: space.md }} />
       <Card>
         <CardHeader icon="sparkles-outline" title="AI and services" />
-        <KeyValue k="Listing AI" v={ai ? (ai.provider === 'template' ? 'Template only (no AI key on the server)' : `${ai.provider}${ai.model ? ` · ${ai.model}` : ''}`) : 'Checking…'} />
-        <KeyValue k="Server" v={API_URL} />
+        <KeyValueRow label="Listing AI" value={ai ? (ai.provider === 'template' ? 'Template only (no AI key on the server)' : `${ai.provider}${ai.model ? ` · ${ai.model}` : ''}`) : 'Checking…'} selectable />
+        <KeyValueRow label="Server" value={API_URL} selectable />
         {USING_LOCAL_SERVER ? (
           <Banner tone="warn" text="This app is using a development server on a computer, not the live Velista server. Remove EXPO_PUBLIC_API_URL from mobile/.env and restart Expo with: npx expo start -c" />
         ) : null}
@@ -244,20 +201,12 @@ export default function SettingsScreen() {
       <View style={{ height: space.md }} />
       <Card>
         <CardHeader icon="person-circle-outline" title="Account" />
-        <KeyValue k="Name" v={user?.name ?? ''} />
-        <KeyValue k="Email" v={user?.email ?? ''} />
+        <KeyValueRow label="Name" value={user?.name ?? ''} selectable />
+        <KeyValueRow label="Email" value={user?.email ?? ''} selectable />
         <Button title="Sign out" variant="secondary" icon="log-out-outline" onPress={confirmSignOut} full />
       </Card>
     </Screen>
   );
 }
 
-function KeyValue({ k, v }: { k: string; v: string }) {
-  return (
-    <Row style={{ justifyContent: 'space-between', alignItems: 'flex-start' }}>
-      <Text style={font.small}>{k}</Text>
-      <Text style={{ flex: 1, textAlign: 'right', fontSize: 14, color: colors.ink, fontWeight: '500' }} selectable>{v}</Text>
-    </Row>
-  );
-}
 

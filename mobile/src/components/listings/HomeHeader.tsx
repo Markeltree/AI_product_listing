@@ -1,5 +1,3 @@
-// Orange hero at the top of the Listings tab: greeting, the seller's numbers at a glance, and a dark
-// round button to start a new listing. The search field overlaps its bottom edge.
 import React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';

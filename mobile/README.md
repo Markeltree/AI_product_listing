@@ -19,7 +19,25 @@ npm install
 npx expo start
 ```
 
-Expo Router reads routes from `src/app/`. Shared code lives in `src/lib`, reusable UI in `src/components`, and the design tokens in `src/theme.ts`.
+Expo Router reads routes from `src/app/`. Screens there hold state and API calls; the UI they render lives in `src/components`:
+
+```
+src/
+  app/                    Screens (routes). Data, state and actions only.
+  components/
+    ui/                   Design system, one component per file: Button, Card, Field, Select, Pill,
+                          Banner, InfoTile, LetterMark... Import from '@/components/ui'.
+    listings/             ListingCard, ListingImage, HomeHeader
+      create/             New-listing steps: PhotoPickerCard, VideoCard, VoiceNoteCard, DetailsForm, ReviewSummary
+      editor/             Editor sections: ListingPreview, PhotosEditor, CategoryPicker, ShopDetailsSection...
+    marketplaces/         EtsyCard, EbayCard, MarketplacesCard, MarketplaceMark
+    navigation/           FloatingTabBar
+  lib/                    API client, auth, rules, formatting, types
+  theme.ts                Colors, spacing, radius, fonts, shadows
+```
+
+Components take data and callbacks as props and do not call the API themselves (CategoryPicker's search
+and the marketplace cards, which manage a connection, are the exceptions).
 
 Use a development build for the native modules (camera roll, audio recording, secure storage):
 

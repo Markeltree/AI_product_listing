@@ -1,15 +1,17 @@
 // Settings card for eBay: connect / disconnect and the one-time listing setup
 // (shipping, payment and return policies, ship-from location, item condition).
 import React, { useCallback, useState } from 'react';
-import { Alert, Linking, Text, View } from 'react-native';
+import { Alert, Linking, View } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { parse as parseUrl } from 'expo-linking';
 import { useFocusEffect } from 'expo-router';
 import { api } from '@/lib/api';
 import { SETTINGS_RETURN } from '@/lib/config';
 import type { EbayPrefs, EbaySetup, EbayStatus } from '@/lib/types';
-import { Banner, Button, Card, Field, Row, Select } from './ui';
-import { colors, font, radius } from '@/theme';
+import {
+  Banner, Button, Card, CardHeader, Field, InfoTile, Pill, Row, Select,
+} from '@/components/ui';
+import { MarketplaceMark } from './MarketplaceMark';
 
 const CONDITION_LABELS: Record<string, string> = {
   NEW: 'New', NEW_OTHER: 'New (other / open box)', USED_EXCELLENT: 'Used: excellent', USED_GOOD: 'Used: good',
@@ -108,26 +110,13 @@ export function EbayCard({ onNotice }: { onNotice: (n: Notice) => void }) {
 
   return (
     <Card>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Text style={font.h2}>eBay</Text>
-        <View style={{ paddingHorizontal: 10, height: 26, borderRadius: 999, justifyContent: 'center', backgroundColor: good ? colors.ok50 : colors.surface3 }}>
-          <Text style={{ fontSize: 12, fontWeight: '700', color: good ? colors.okDark : colors.muted }}>{badge}</Text>
-        </View>
-      </Row>
+      <CardHeader icon="pricetag-outline" title="eBay" right={<Pill label={badge} tone={good ? 'success' : 'neutral'} />} />
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14, borderRadius: radius.md, backgroundColor: colors.surface2, borderWidth: 1, borderColor: colors.line }}>
-        <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: '#0064D2', alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: '#fff', fontWeight: '800', fontSize: 19 }}>e</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={{ fontWeight: '600', color: colors.ink }} numberOfLines={1}>
-            {status?.connected ? status.username ?? 'Your eBay account' : 'No eBay account connected'}
-          </Text>
-          <Text style={font.small}>
-            {status?.connected ? `${status.sandbox ? 'Sandbox · ' : ''}When an item sells on Etsy or eBay, Velista ends it on the other.` : 'Connect to publish listings to eBay too.'}
-          </Text>
-        </View>
-      </View>
+      <InfoTile
+        leading={<MarketplaceMark marketplace="ebay" />}
+        title={status?.connected ? status.username ?? 'Your eBay account' : 'No eBay account connected'}
+        subtitle={status?.connected ? `${status.sandbox ? 'Sandbox · ' : ''}When an item sells on Etsy or eBay, Velista ends it on the other.` : 'Connect to publish listings to eBay too.'}
+      />
 
       {status && !status.configured ? (
         <Banner tone="warn" text="The server has no eBay keys yet. Add EBAY_CLIENT_ID, EBAY_CLIENT_SECRET and EBAY_RUNAME to its .env file and restart it." />

@@ -1,8 +1,5 @@
-1
-import React, { useEffect, useMemo, useState } from 'react';
-import { Alert, Image as RNImage, Pressable, ScrollView, Text, View } from 'react-native';
-import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { Alert, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
   AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState,
@@ -11,21 +8,20 @@ import { launchCameraAsync, launchImageLibraryAsync, requestCameraPermissionsAsy
 import { api, ApiError, appendFile, appendFiles } from '@/lib/api';
 import { preparePhoto } from '@/lib/images';
 import { useAuth } from '@/lib/auth';
-import { formatDuration } from '@/lib/format';
-import { LANGUAGES, MAX_PHOTOS, MAX_QUANTITY, MIN_PRICE, PRODUCT_TYPES, TONES } from '@/lib/rules';
-import type { Listing, ProductSuggestions, Tone } from '@/lib/types';
+import { MAX_PHOTOS, MAX_QUANTITY, MIN_PRICE } from '@/lib/rules';
+import type { Listing, ProductSuggestions } from '@/lib/types';
 import {
-  Banner, Button, Card, CardHeader, ChipInput, Field, Heading, KeyValueRow, Row, Screen, Segmented, Select, Stepper,
+  Banner, Button, Heading, Screen, Stepper,
 } from '@/components/ui';
-import { colors, font, radius, space } from '@/theme';
+import { DetailsForm } from '@/components/listings/create/DetailsForm';
+import { PhotoPickerCard, VideoCard, VoiceNoteCard } from '@/components/listings/create/MediaCards';
+import { ReviewSummary } from '@/components/listings/create/ReviewSummary';
+import type { ListingDetails, PickedClip, PickedPhoto } from '@/components/listings/create/types';
+import { font, space } from '@/theme';
 
-type Photo = { id: string; uri: string; name: string; type: string };
-type Clip = { uri: string; name: string; type: string; durationMs?: number };
-
-type Details = {
-  name: string; type: string; price: string; quantity: string; materials: string; colors: string;
-  dimensions: string; brand: string; keywords: string[]; tone: Tone; language: string; audience: string; notes: string;
-};
+type Photo = PickedPhoto;
+type Clip = PickedClip;
+type Details = ListingDetails;
 
 const STEPS = ['Media', 'Details', 'Review'];
 
@@ -239,12 +235,6 @@ export default function NewListingScreen() {
     }
   };
 
-  const summary = useMemo(() => ({
-    photos: photos.length,
-    video: !!video,
-    voice: !!voice,
-  }), [photos.length, video, voice]);
-
   return (
     <Screen>
       <Heading eyebrow={`Step ${step + 1} of ${STEPS.length}`} title="New listing" subtitle="Three quick steps. You review everything before it goes to Etsy." />
@@ -256,100 +246,21 @@ export default function NewListingScreen() {
 
       {step === 0 ? (
         <View style={{ gap: space.md }}>
-          <Card>
-            <CardHeader
-              icon="images-outline"
-              title="Product photos"
-              subtitle="Plain backgrounds and daylight work best. The first photo is your cover."
-              right={<Text style={styles.count}>{photos.length}/{MAX_PHOTOS}</Text>}
-            />
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {photos.map((p, i) => (
-                <View key={p.id} style={{ width: '31%', aspectRatio: 1, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surface3 }}>
-                  <Image source={{ uri: p.uri }} style={{ width: '100%', height: '100%' }} contentFit="cover" accessibilityLabel={`Photo ${i + 1}`} />
-                  {i === 0 ? (
-                    <View style={{ position: 'absolute', top: 6, left: 6, backgroundColor: 'rgba(255,255,255,0.95)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 }}>
-                      <Text style={{ fontSize: 11, fontWeight: '600', color: colors.ink }}>Cover</Text>
-                    </View>
-                  ) : null}
-                  <View style={{ position: 'absolute', bottom: 6, left: 6, right: 6, flexDirection: 'row', justifyContent: 'space-between' }}>
-                    <Pressable onPress={() => movePhoto(i, -1)} disabled={i === 0} accessibilityLabel={`Move photo ${i + 1} left`} style={chipBtn(i === 0)}>
-                      <Ionicons name="chevron-back" size={16} color={colors.ink} />
-                    </Pressable>
-                    <Pressable onPress={() => setPhotos((p) => p.filter((x) => x.id !== p[i].id))} accessibilityLabel={`Remove photo ${i + 1}`} style={chipBtn(false)}>
-                      <Ionicons name="trash-outline" size={16} color={colors.danger} />
-                    </Pressable>
-                    <Pressable onPress={() => movePhoto(i, 1)} disabled={i === photos.length - 1} accessibilityLabel={`Move photo ${i + 1} right`} style={chipBtn(i === photos.length - 1)}>
-                      <Ionicons name="chevron-forward" size={16} color={colors.ink} />
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-              {photos.length < MAX_PHOTOS ? (
-                <Pressable
-                  onPress={addPhotos}
-                  accessibilityRole="button"
-                  accessibilityLabel="Add photos"
-                  style={{ width: '31%', aspectRatio: 1, borderRadius: radius.md, borderWidth: 1.5, borderStyle: 'dashed', borderColor: colors.accent100, alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.accent50 }}
-                >
-                  <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' }}>
-                    <Ionicons name="add" size={22} color={colors.accent} />
-                  </View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: colors.ink2 }}>Add photos</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          </Card>
-
-          <Card>
-            <CardHeader icon="videocam-outline" title="Product video" subtitle="A 10 to 30 second clip from every angle. We analyse three frames from it." right={<Text style={styles.optional}>Optional</Text>} />
-            {video ? (
-              <Row style={{ justifyContent: 'space-between', backgroundColor: colors.surface2, padding: 12, borderRadius: radius.md }}>
-                <Row style={{ flex: 1 }}>
-                  <Ionicons name="videocam-outline" size={20} color={colors.accentDark} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontWeight: '600', color: colors.ink }} numberOfLines={1}>{video.name}</Text>
-                    <Text style={font.small}>{video.durationMs ? formatDuration(video.durationMs) : 'Ready to upload'}</Text>
-                  </View>
-                </Row>
-                <Button title="Remove" variant="ghost" onPress={() => setVideo(null)} style={{ minHeight: 36 }} />
-              </Row>
-            ) : (
-              <View style={{ gap: space.sm }}>
-                <Button title="Record with camera" variant="secondary" icon="camera-outline" onPress={recordVideo} full />
-                <Button title="Upload from gallery" variant="secondary" icon="cloud-upload-outline" onPress={addVideo} full />
-              </View>
-            )}
-          </Card>
-
-          <Card>
-            <CardHeader icon="mic-outline" title="Voice note" subtitle="Say the materials, size or story behind the piece. We transcribe it and use the facts in your listing." right={<Text style={styles.optional}>Optional</Text>} />
-            {recState.isRecording ? (
-              <Row style={{ justifyContent: 'space-between', backgroundColor: colors.danger50, padding: 14, borderRadius: radius.md }}>
-                <Row>
-                  <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: colors.danger }} />
-                  <Text style={{ fontWeight: '600', color: '#A8322A', fontVariant: ['tabular-nums'] }}>
-                    Recording {formatDuration(recState.durationMillis)}
-                  </Text>
-                </Row>
-                <Button title="Stop" variant="primary" icon="stop" onPress={stopRecording} style={{ minHeight: 38, paddingHorizontal: 14 }} />
-              </Row>
-            ) : voice ? (
-              <Row style={{ justifyContent: 'space-between', backgroundColor: colors.ok50, padding: 12, borderRadius: radius.md }}>
-                <Row>
-                  <Ionicons name="mic-outline" size={20} color="#176B47" />
-                  <Text style={{ fontWeight: '600', color: '#176B47' }}>Voice note ready · {voice.durationMs ? formatDuration(voice.durationMs) : ''}</Text>
-                </Row>
-                <Row>
-                  <Button title="Re-record" variant="ghost" onPress={startRecording} style={{ minHeight: 36 }} />
-                  <Button title="Remove" variant="ghost" onPress={() => setVoice(null)} style={{ minHeight: 36 }} />
-                </Row>
-              </Row>
-            ) : (
-              <Button title="Record a voice note" variant="secondary" icon="mic-outline" onPress={startRecording} full />
-            )}
-          </Card>
-
+          <PhotoPickerCard
+            photos={photos}
+            onAdd={addPhotos}
+            onMove={movePhoto}
+            onRemove={(photoId) => setPhotos((list) => list.filter((x) => x.id !== photoId))}
+          />
+          <VideoCard video={video} onRecord={recordVideo} onUpload={addVideo} onRemove={() => setVideo(null)} />
+          <VoiceNoteCard
+            recording={recState.isRecording}
+            recordingMs={recState.durationMillis}
+            voice={voice}
+            onStart={startRecording}
+            onStop={stopRecording}
+            onRemove={() => setVoice(null)}
+          />
           {!hasMedia ? <Text style={[font.small, { textAlign: 'center' }]}>Add at least one photo or a video to continue.</Text> : null}
         </View>
       ) : null}
@@ -357,71 +268,11 @@ export default function NewListingScreen() {
       {step === 1 ? (
         <View style={{ gap: space.md }}>
           {notice ? <Banner tone={notice.tone} text={notice.text} /> : null}
-          <Card>
-            <CardHeader icon="cube-outline" title="The basics" />
-            <Field label="Product name" value={details.name} onChangeText={(v) => set('name', v)} placeholder="e.g. Sage Ceramic Mug" maxLength={140} counter={{ length: details.name.length, max: 140 }} error={errors.name} />
-            <Field label="Product type" value={details.type} onChangeText={(v) => set('type', v)} placeholder="e.g. Mug" error={errors.type} hint={`Suggestions: ${PRODUCT_TYPES.slice(0, 6).join(', ')}…`} />
-            <Row style={{ alignItems: 'flex-start' }}>
-              <View style={{ flex: 1 }}>
-                <Field label="Price (USD)" value={details.price} onChangeText={(v) => set('price', v)} placeholder="24.00" keyboardType="decimal-pad" error={errors.price} hint="Blank lets the AI suggest one." />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Field label="Quantity" value={details.quantity} onChangeText={(v) => set('quantity', v)} keyboardType="numeric" error={errors.quantity} />
-              </View>
-            </Row>
-          </Card>
-
-          <Card>
-            <CardHeader icon="color-palette-outline" title="Details" subtitle="Only what you know. Velista never invents materials or sizes." />
-            <Field label="Materials" value={details.materials} onChangeText={(v) => set('materials', v)} placeholder="e.g. Stoneware, glaze" />
-            <Field label="Colors" value={details.colors} onChangeText={(v) => set('colors', v)} placeholder="e.g. Sage green, cream" />
-            <Field label="Dimensions" value={details.dimensions} onChangeText={(v) => set('dimensions', v)} placeholder="e.g. 10 cm tall, 350 ml" maxLength={160} />
-            <Field label="Brand" value={details.brand} onChangeText={(v) => set('brand', v)} placeholder="Your shop or brand" maxLength={80} hint="Only add it if it is your brand name." />
-          </Card>
-
-          <Card>
-            <CardHeader icon="chatbubble-ellipses-outline" title="Listing voice" />
-            <ChipInput label="Keywords" values={details.keywords} onChange={(v) => set('keywords', v)} placeholder="Type a keyword, then Enter" maxCount={30} hint="Words buyers search for, such as “boho wall art”." />
-            <View style={{ gap: 6 }}>
-              <Text style={font.label}>Tone</Text>
-              <Segmented<Tone> value={details.tone} onChange={(v) => set('tone', v)} options={TONES as { value: Tone; label: string }[]} />
-            </View>
-            <Select label="Language" value={details.language} onChange={(v) => set('language', v)} options={LANGUAGES.map((l) => ({ value: l, label: l }))} />
-            <Field label="Who is it for?" value={details.audience} onChangeText={(v) => set('audience', v)} placeholder="e.g. New homeowners, coffee lovers" maxLength={160} />
-            <Field label="Anything else?" value={details.notes} onChangeText={(v) => set('notes', v)} placeholder="Care instructions, what is included, the story behind it" multiline maxLength={1000} counter={{ length: details.notes.length, max: 1000 }} />
-          </Card>
+          <DetailsForm details={details} set={set} errors={errors} />
         </View>
       ) : null}
 
-      {step === 2 ? (
-        <View style={{ gap: space.md }}>
-          <Card>
-            <CardHeader
-              icon="images-outline"
-              title="Media"
-              subtitle={`${summary.photos} photo${summary.photos === 1 ? '' : 's'}${summary.video ? ' · 1 video' : ''}${summary.voice ? ' · 1 voice note' : ''}`}
-            />
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-              {photos.map((p) => <RNImage key={p.id} source={{ uri: p.uri }} style={{ width: 76, height: 76, borderRadius: radius.md }} />)}
-            </ScrollView>
-          </Card>
-          <Card>
-            <CardHeader icon="cube-outline" title="Product" />
-            {[
-              ['Name', details.name],
-              ['Type', details.type],
-              ['Price', details.price.trim() ? `$${Number(details.price).toFixed(2)}` : 'AI suggested'],
-              ['Quantity', details.quantity],
-              ['Materials', details.materials],
-              ['Colors', details.colors],
-              ['Keywords', details.keywords.join(', ')],
-              ['Tone', TONES.find((t) => t.value === details.tone)?.label ?? details.tone],
-              ['Language', details.language],
-            ].filter(([, v]) => v).map(([k, v]) => <KeyValueRow key={k} label={k} value={v} />)}
-          </Card>
-          <Banner tone="info" text="Velista writes the title, description, tags, category, alt text and a suggested price. Nothing goes to Etsy until you review and publish it." />
-        </View>
-      ) : null}
+      {step === 2 ? <ReviewSummary photos={photos} hasVideo={!!video} hasVoice={!!voice} details={details} /> : null}
 
       <View style={{ flexDirection: 'row', gap: 10, marginTop: space.xl }}>
         {step > 0 ? <Button title="Back" variant="secondary" icon="arrow-back" onPress={() => setStep(step - 1)} style={{ flex: 1 }} /> : null}
@@ -440,13 +291,3 @@ export default function NewListingScreen() {
     </Screen>
   );
 }
-
-const styles = {
-  count: { fontSize: 13, fontWeight: '700' as const, color: colors.ink2, fontVariant: ['tabular-nums' as const] },
-  optional: { fontSize: 12, fontWeight: '600' as const, color: colors.muted, backgroundColor: colors.surface3, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 999, overflow: 'hidden' as const },
-};
-
-const chipBtn = (disabled: boolean) => ({
-  width: 30, height: 30, borderRadius: 9, backgroundColor: 'rgba(255,255,255,0.94)',
-  alignItems: 'center' as const, justifyContent: 'center' as const, opacity: disabled ? 0.35 : 1,
-});
