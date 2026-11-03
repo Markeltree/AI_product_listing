@@ -90,6 +90,12 @@ export const config = {
     };
   })(),
 
+  // Redis (optional). When set, generation and the cross-delist sync run on BullMQ queues and rate-limit
+  // counters are shared between servers. Railway: use the Redis service's REDIS_URL reference variable.
+  redisUrl: process.env.REDIS_URL || '',
+  // Listings written at the same time by one server (each is one AI call).
+  generationConcurrency: Math.max(1, Number(process.env.GENERATION_CONCURRENCY || 2)),
+
   // How often listings live on both Etsy and eBay are checked, so a sale or end on one
   // marketplace ends the copy on the other. 0 turns the background check off.
   syncIntervalMs: Math.max(0, Number(process.env.SYNC_INTERVAL_MINUTES ?? 3)) * 60 * 1000,
@@ -108,4 +114,5 @@ export const integrations = () => ({
   openai: Boolean(config.openai.apiKey),
   etsy: Boolean(config.etsy.apiKey),
   ebay: Boolean(config.ebay.clientId && config.ebay.clientSecret && config.ebay.ruName),
+  queue: config.redisUrl ? 'bullmq' : 'in-process',
 });

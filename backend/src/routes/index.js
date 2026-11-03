@@ -1,5 +1,6 @@
 // All API routes, mounted under /api by app.js.
 import { Router } from 'express';
+import { asyncHandler } from '../utils/asyncHandler.js';
 import { health } from '../controllers/health.controller.js';
 import { connectDone } from '../controllers/connectDone.controller.js';
 import authRoutes from './auth.routes.js';
@@ -10,7 +11,7 @@ import settingsRoutes from './settings.routes.js';
 
 const router = Router();
 
-router.get('/health', health);
+router.get('/health', asyncHandler(health));
 router.get('/connect/done', connectDone); // after connecting through an invite link
 router.use('/auth', authRoutes);
 router.use('/listings', listingRoutes);

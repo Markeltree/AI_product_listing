@@ -52,7 +52,9 @@ async function readTranscript(voice, warnings) {
   }
 }
 
-export async function runGeneration(userId, listingId) {
+// finalAttempt: false when a queue will retry this job on failure. The listing then stays on
+// "generating" and the error is re-thrown so BullMQ schedules the retry.
+export async function runGeneration(userId, listingId, { finalAttempt = true } = {}) {
   const progress = (step) => updateListing(userId, listingId, (l) => { l.step = step; });
 
   try {
@@ -89,7 +91,11 @@ export async function runGeneration(userId, listingId) {
       l.error = null;
     });
   } catch (err) {
-    console.error(`[generation] ${listingId} failed:`, err);
+    console.error(`[generation] ${listingId} failed${finalAttempt ? '' : ', will retry'}:`, err.message);
+    if (!finalAttempt) {
+      await updateListing(userId, listingId, (l) => { l.step = 'Had a problem, trying again shortly'; }).catch(() => {});
+      throw err;
+    }
     await updateListing(userId, listingId, (l) => {
       l.status = LISTING_STATUS.FAILED;
       l.step = null;

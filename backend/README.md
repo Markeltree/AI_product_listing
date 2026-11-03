@@ -68,8 +68,9 @@ Run `supabase/schema.sql` in the Supabase SQL editor. It is safe to run again af
 2. Service Settings: **Root Directory** `backend`, **Start Command** `npm start`, **Healthcheck Path** `/api/health`. (Railway no longer accepts config files for new services, so set these in the dashboard.)
 3. Add a **Volume** mounted at `/data`, and set `DATA_DIR=/data` and `UPLOAD_DIR=/data/uploads`. Without it, uploaded photos are lost on every deploy.
 4. Copy the variables from your `.env` into Railway's Variables. Set `APP_URL` to the Railway domain (Settings, Networking, Generate Domain). Railway sets `PORT` itself.
-5. Keep **one replica**, and use a paid plan with **serverless off**. Generation and the cross-delist sync run inside the server process, so a sleeping service stops ending sold listings.
-6. Update the Etsy redirect URI and the eBay RuName URLs to the Railway domain.
+5. **Redis (recommended):** in the same project, New, Database, Redis. Then on this service add the variable `REDIS_URL=${{Redis.REDIS_URL}}`. Generation and the cross-delist sync then run on BullMQ queues (retries, survive deploys) and rate limits are shared. `/api/health` shows `"redis":"ok"` and `"queue":"bullmq"` when it works.
+6. Keep **one replica**, and use a paid plan with **serverless off**. Generation and the cross-delist sync run inside the server process, so a sleeping service stops ending sold listings.
+7. Update the Etsy redirect URI and the eBay RuName URLs to the Railway domain.
 
 ## Layout
 
@@ -123,5 +124,5 @@ npm run test:crosslist    # end-to-end Etsy + eBay flow against the mocks, in a 
 
 - **Signups.** Anyone who can reach the API can create an account and spend AI credits. Limit signups before sharing the URL publicly.
 - **Files.** Media is stored on disk (`UPLOAD_DIR`). For more than one server, move it to object storage such as S3.
-- **Background work.** Generation and sync run in-process. Fine for one instance; use a queue for more.
+- **Background work.** With `REDIS_URL`, generation and sync run on BullMQ (`src/queue/`); without it they run in-process, which is fine for local development.
 - **Costs.** Each listing makes one vision request (up to 8 images) plus one transcription when a voice note is attached. Each active Etsy listing costs the seller Etsy's listing fee.

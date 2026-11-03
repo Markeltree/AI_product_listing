@@ -9,7 +9,7 @@ import { badRequest } from '../utils/errors.js';
 import { now } from '../utils/parse.js';
 import { clean } from '../utils/text.js';
 import { sanitizeContent, sanitizeProduct } from '../validators/listing.sanitizer.js';
-import { startGeneration } from './generation.service.js';
+import { enqueueGeneration } from '../queue/jobs.js';
 import {
   imagesOf, listingDir, mediaFromUploads, removeFile, reorderImages, toMediaRecord,
 } from './media.service.js';
@@ -84,7 +84,7 @@ export async function createListing({ user, product, files }) {
     media: mediaFromUploads(files),
   });
   await saveListing(listing);
-  startGeneration(user.id, listing.id);
+  await enqueueGeneration(user.id, listing.id);
   return listing;
 }
 
@@ -108,7 +108,7 @@ export async function createBulkListings({ user, files, defaults }) {
       media: [toMediaRecord(file, { kind: 'image', filePath: dest })],
     });
     await saveListing(listing);
-    startGeneration(user.id, id);
+    await enqueueGeneration(user.id, id);
     created.push(listing);
   }
   return created;
@@ -130,7 +130,7 @@ export async function startRegeneration(userId, listingId) {
   listing.step = 'Queued';
   listing.error = null;
   await saveListing(listing);
-  startGeneration(userId, listingId);
+  await enqueueGeneration(userId, listingId);
   return listing;
 }
 
