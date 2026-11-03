@@ -65,10 +65,10 @@ Run `supabase/schema.sql` in the Supabase SQL editor. It is safe to run again af
 ## Deploy to Railway
 
 1. New project, then Deploy from GitHub repo, then pick this repository.
-2. Service Settings: **Root Directory** `backend`. Railway reads `backend/railway.json` (start command and health check `/api/health`). If it does not pick it up, set the config file path to `/backend/railway.json`.
+2. Service Settings: **Root Directory** `backend`, **Start Command** `npm start`, **Healthcheck Path** `/api/health`. (Railway no longer accepts config files for new services, so set these in the dashboard.)
 3. Add a **Volume** mounted at `/data`, and set `DATA_DIR=/data` and `UPLOAD_DIR=/data/uploads`. Without it, uploaded photos are lost on every deploy.
 4. Copy the variables from your `.env` into Railway's Variables. Set `APP_URL` to the Railway domain (Settings, Networking, Generate Domain). Railway sets `PORT` itself.
-5. Keep **one replica**. Generation and the cross-delist sync run inside the server process.
+5. Keep **one replica**, and use a paid plan with **serverless off**. Generation and the cross-delist sync run inside the server process, so a sleeping service stops ending sold listings.
 6. Update the Etsy redirect URI and the eBay RuName URLs to the Railway domain.
 
 ## Layout
