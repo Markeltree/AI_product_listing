@@ -174,6 +174,12 @@ export class SqliteStore {
   async deleteHaul(userId, id) {
     this.run('DELETE FROM hauls WHERE id = ? AND user_id = ?', id, userId);
   }
+  async listHaulsByStatus(status) {
+    return this.all('SELECT * FROM hauls WHERE status = ?', status).map(toHaul);
+  }
+  async listListingSummariesByHaul(userId, haulId) {
+    return this.all('SELECT id, summary FROM listings WHERE user_id = ? AND haul_id = ? ORDER BY created_at', userId, haulId).map(toSummaryRow);
+  }
 
   // ---------- Etsy connections ----------
 

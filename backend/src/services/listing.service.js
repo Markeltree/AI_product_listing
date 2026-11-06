@@ -21,7 +21,7 @@ export const EMPTY_CONTENT = {
   title: '', description: '', tags: [], category: '', attributes: [], altTexts: [], suggestedPrice: null, pricingNote: '',
 };
 
-function newListing({ id = randomUUID(), userId, product, media }) {
+function newListing({ id = randomUUID(), userId, product, media, haulId = null, origins = null }) {
   const createdAt = now();
   return {
     id,
@@ -31,6 +31,8 @@ function newListing({ id = randomUUID(), userId, product, media }) {
     error: null,
     createdAt,
     updatedAt: createdAt,
+    haulId,
+    origins,
     product,
     content: { ...EMPTY_CONTENT },
     media,
@@ -95,6 +97,14 @@ export async function createBulkListings({ user, files, defaults }) {
     created.push(listing);
   }
   return created;
+}
+
+// One product found in a haul video. Photos are already saved in the listing's folder.
+export async function createHaulListing({ id, userId, haulId, product, media, origins, settings }) {
+  const listing = newListing({ id, userId, haulId, origins, media, product: sanitizeProduct(product, settings) });
+  await saveListing(listing);
+  await enqueueGeneration(userId, id);
+  return listing;
 }
 
 // Applies an editor update: product facts, generated content and/or photo order.

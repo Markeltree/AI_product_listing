@@ -3,13 +3,13 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../../config/index.js';
-import { MAX_FRAMES, MAX_IMAGES } from '../../config/constants.js';
-import { sanitizeContent, sanitizeSuggestions } from '../../validators/listing.sanitizer.js';
-import { buildAnalyzePrompt, buildUserPrompt } from './prompts.js';
+import { MAX_FRAMES, MAX_HAUL_ITEMS, MAX_IMAGES } from '../../config/constants.js';
+import { sanitizeContent, sanitizeHaulItems, sanitizeSuggestions } from '../../validators/listing.sanitizer.js';
+import { buildAnalyzePrompt, buildHaulPrompt, buildUserPrompt } from './prompts.js';
 import { callAnthropic, callOpenAI } from './providers.js';
 import { templateContent } from './template.js';
 
-export { extractVideoFrames } from './video.js';
+export { extractAudio, extractVideoFrames, grabFullFrame, sampleVideoFrames } from './video.js';
 export { transcribeAudio } from './providers.js';
 
 const MIME_BY_EXT = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp', '.gif': 'image/gif' };
@@ -61,6 +61,16 @@ export async function analyzeProduct(imagePaths, { language = 'English', frames 
   const prompt = buildAnalyzePrompt({ photoCount: photoPaths.length, frameCount: framePaths.length, language });
   const call = ai.provider === 'anthropic' ? callAnthropic : callOpenAI;
   return sanitizeSuggestions(parseJsonLoose(await call(prompt, images)));
+}
+
+// Finds the separate products in frames from one haul video. Returns null when no AI provider is set up.
+export async function detectHaulItems(framePaths, { transcript = null } = {}) {
+  const ai = aiStatus();
+  if (ai.provider === 'template') return null;
+  const images = await Promise.all(framePaths.map(readImage));
+  const prompt = buildHaulPrompt({ frameCount: images.length, maxItems: MAX_HAUL_ITEMS, transcript });
+  const call = ai.provider === 'anthropic' ? callAnthropic : callOpenAI;
+  return sanitizeHaulItems(parseJsonLoose(await call(prompt, images, { maxTokens: 6000 })), images.length);
 }
 
 // Text-only JSON question for the configured provider. Returns null when no AI is set up.

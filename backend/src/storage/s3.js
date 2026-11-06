@@ -1,5 +1,10 @@
 // Stores files in S3-compatible object storage such as Cloudflare R2. The phone uploads straight to the
 // bucket with a signed URL, so large videos never pass through the API server.
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import { AwsClient } from 'aws4fetch';
 import { HttpError } from '../utils/errors.js';
 
@@ -17,6 +22,16 @@ export function s3Storage({ endpoint, bucket, accessKeyId, secretAccessKey, regi
       url.searchParams.set('X-Amz-Expires', String(UPLOAD_URL_SECONDS));
       const signed = await client.sign(new Request(url, { method: 'PUT' }), { aws: { signQuery: true } });
       return { method: 'PUT', url: signed.url, headers: { 'content-type': mime } };
+    },
+
+    // Downloads the object to a temporary folder, for tools such as ffmpeg that need a real file.
+    async toLocalFile(key) {
+      const res = await client.fetch(objectUrl(key));
+      if (!res.ok) throw new HttpError(502, `File storage returned ${res.status}.`);
+      const dir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'velista-object-'));
+      const file = path.join(dir, path.basename(key));
+      await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(file));
+      return { path: file, cleanup: () => fs.promises.rm(dir, { recursive: true, force: true }) };
     },
 
     async stat(key) {

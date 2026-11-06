@@ -34,13 +34,36 @@ async function videoDuration(videoPath) {
   return (await probeDuration(videoPath).catch(() => 0)) || decodeDuration(videoPath);
 }
 
-async function grabFrame(videoPath, seconds, out) {
+async function grabFrame(videoPath, seconds, out, { width = 960, quality = 4 } = {}) {
   await exec(config.ffmpeg, [
     '-y', '-loglevel', 'error', '-ss', seconds.toFixed(2), '-i', videoPath,
-    '-frames:v', '1', '-vf', 'scale=960:-2', '-q:v', '4', out,
+    '-frames:v', '1', ...(width ? ['-vf', `scale=${width}:-2`] : []), '-q:v', String(quality), out,
   ], EXEC_OPTS);
   const stat = await fs.stat(out).catch(() => null);
   return Boolean(stat?.size);
+}
+
+// A listing photo: the frame at full video size.
+export const grabFullFrame = (videoPath, seconds, out) => grabFrame(videoPath, seconds, out, { width: 0, quality: 2 });
+
+// Frames spread across a haul video, small enough to send many to the AI. Returns [{ path, seconds }].
+export async function sampleVideoFrames(videoPath, outDir, count) {
+  await fs.mkdir(outDir, { recursive: true });
+  const duration = await videoDuration(videoPath);
+  const times = duration ? Array.from({ length: count }, (_, i) => (duration * (i + 0.5)) / count) : [0];
+  const frames = [];
+  for (const [i, seconds] of times.entries()) {
+    const out = path.join(outDir, `sample-${i + 1}.jpg`);
+    if (await grabFrame(videoPath, seconds, out, { width: 720, quality: 5 }).catch(() => false)) frames.push({ path: out, seconds });
+  }
+  return frames;
+}
+
+// The video's sound as a small MP3 for transcription. Returns null if the video has no sound.
+export async function extractAudio(videoPath, out) {
+  await exec(config.ffmpeg, ['-y', '-loglevel', 'error', '-i', videoPath, '-vn', '-ac', '1', '-b:a', '48k', out], EXEC_OPTS);
+  const stat = await fs.stat(out).catch(() => null);
+  return stat?.size ? out : null;
 }
 
 // Returns the paths of the written JPG frames. Throws if ffmpeg is missing; returns [] if the

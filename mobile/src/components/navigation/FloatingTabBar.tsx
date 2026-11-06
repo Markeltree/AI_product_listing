@@ -11,7 +11,7 @@ type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tab
 type IconName = keyof typeof Ionicons.glyphMap;
 
 // Ionicons base name per route; the active tab uses the filled icon, the others the outline one.
-const ICONS: Record<string, string> = { index: 'grid', new: 'add-circle', bulk: 'layers', settings: 'settings' };
+const ICONS: Record<string, string> = { index: 'grid', haul: 'videocam', new: 'add-circle', bulk: 'layers', settings: 'settings' };
 
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();
@@ -46,8 +46,8 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: T
               accessibilityLabel={label}
               hitSlop={4}
               style={({ pressed }) => ({
-                minWidth: 72, height: 54, borderRadius: 24, alignItems: 'center', justifyContent: 'center', gap: 2,
-                paddingHorizontal: 10, backgroundColor: focused ? colors.accent50 : 'transparent', opacity: pressed ? 0.7 : 1,
+                minWidth: 62, height: 54, borderRadius: 24, alignItems: 'center', justifyContent: 'center', gap: 2,
+                paddingHorizontal: 8, backgroundColor: focused ? colors.accent50 : 'transparent', opacity: pressed ? 0.7 : 1,
               })}
             >
               <Ionicons name={(focused ? base : `${base}-outline`) as IconName} size={21} color={focused ? colors.accent : colors.muted} />

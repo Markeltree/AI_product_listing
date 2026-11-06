@@ -156,3 +156,102 @@ test('listings come back in pages, newest first', async () => {
   assert.deepEqual(last.listings.map((l) => l.id), ['page-0']);
   assert.equal(last.hasMore, false);
 });
+
+// ---------- pipeline ----------
+
+const { runHaul } = await import('../src/services/haulPipeline.js');
+const { sanitizeHaulItems } = await import('../src/validators/listing.sanitizer.js');
+const { config } = await import('../src/config/index.js');
+const { execFile } = await import('node:child_process');
+const { randomUUID } = await import('node:crypto');
+const { promisify } = await import('node:util');
+
+async function queuedHaul(userId) {
+  const id = randomUUID();
+  const sourceKey = `${userId}/hauls/${id}/source.mp4`;
+  const file = path.join(process.env.UPLOAD_DIR, sourceKey);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  await promisify(execFile)(config.ffmpeg, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc=duration=2:size=320x240:rate=10', file]);
+  const at = new Date().toISOString();
+  await store.saveHaul({ id, userId, status: 'queued', sourceKey, sourceMime: 'video/mp4', itemCount: 0, createdAt: at, updatedAt: at });
+  return { id, file };
+}
+
+const item = (name, frames) => ({
+  name, type: 'Art', colors: 'Teal', materials: '', brand: '', dimensions: '', notes: '', frames, origins: { name: 'observed', size: 'missing' },
+});
+const haulUser = async () => (await store.findUserByEmail('haul@example.com')).id;
+
+test('a haul video becomes one draft listing per product, then the video is removed', async () => {
+  const userId = await haulUser();
+  const { id, file } = await queuedHaul(userId);
+  let sent = 0;
+  await runHaul(userId, id, { detect: async (frames) => { sent = frames.length; return [item('Matchstick art', [0, 3]), item('Wire canvas', [5])]; } });
+
+  const haul = await store.getHaul(userId, id);
+  assert.equal(haul.status, 'review');
+  assert.equal(haul.itemCount, 2);
+  assert.ok(sent >= 12, `only ${sent} frames were sent`);
+  assert.ok(!fs.existsSync(file));
+
+  const rows = await store.listListingSummariesByHaul(userId, id);
+  assert.equal(rows.length, 2);
+  const listings = await Promise.all(rows.map((r) => store.getListing(userId, r.id)));
+  const art = listings.find((l) => l.product.name === 'Matchstick art');
+  assert.equal(art.haulId, id);
+  assert.equal(art.origins.name, 'observed');
+  assert.equal(art.media.length, 2);
+  for (const m of art.media) assert.ok(fs.statSync(path.join(process.env.UPLOAD_DIR, m.path)).size > 0);
+
+  const res = await api('GET', `/api/hauls/${id}`);
+  assert.equal(res.json.haul.listings.length, 2);
+  assert.equal(res.json.haul.sourceKey, undefined);
+});
+
+test('a video with no products fails with a clear message', async () => {
+  const userId = await haulUser();
+  const { id } = await queuedHaul(userId);
+  await runHaul(userId, id, { detect: async () => [] });
+  const haul = await store.getHaul(userId, id);
+  assert.equal(haul.status, 'failed');
+  assert.match(haul.error, /could not find any products/);
+});
+
+test('a temporary failure goes back to the queue, and a retry leaves no duplicates', async () => {
+  const userId = await haulUser();
+  const { id } = await queuedHaul(userId);
+  await assert.rejects(runHaul(userId, id, { finalAttempt: false, detect: async () => { throw new Error('AI is down'); } }), /AI is down/);
+  assert.equal((await store.getHaul(userId, id)).status, 'processing');
+
+  await runHaul(userId, id, { finalAttempt: false, detect: async () => { throw new Error('AI is down'); } }).catch(() => {});
+  await runHaul(userId, id, { detect: async () => [item('One', [0])] });
+  assert.equal((await store.getHaul(userId, id)).status, 'review');
+  assert.equal((await store.listListingSummariesByHaul(userId, id)).length, 1);
+});
+
+test('a broken video fails without showing technical errors', async () => {
+  const userId = await haulUser();
+  const { id, file } = await queuedHaul(userId);
+  fs.writeFileSync(file, 'not a video');
+  await runHaul(userId, id, { detect: async () => [item('One', [0])] });
+  const haul = await store.getHaul(userId, id);
+  assert.equal(haul.status, 'failed');
+  assert.match(haul.error, /could not read this video/);
+});
+
+test('AI haul output is cleaned', () => {
+  const items = sanitizeHaulItems({
+    items: [
+      { name: 'Good', frames: [1, 1, 99, 'x', 2, 3], size: '4x6', origins: { name: 'observed', size: 'inferred', colors: 'made-up' } },
+      { name: 'Said size', frames: [0], size: '4x6 inches', origins: { size: 'spoken' } },
+      { name: 'No usable frame', frames: [99] },
+      { name: '', frames: [0] },
+    ],
+  }, 5);
+  assert.equal(items.length, 2);
+  assert.deepEqual(items[0].frames, [1, 2]);
+  assert.equal(items[0].dimensions, '');
+  assert.equal(items[0].origins.colors, 'missing');
+  assert.equal(items[1].dimensions, '4x6 inches');
+  assert.deepEqual(sanitizeHaulItems({ items: 'nope' }, 5), []);
+});

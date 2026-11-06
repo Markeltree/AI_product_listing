@@ -41,6 +41,9 @@ export function localStorage(rootDir) {
       }
     },
 
+    // Files are already on disk, so there is nothing to clean up.
+    toLocalFile: async (key) => ({ path: fileFor(key), cleanup: async () => {} }),
+
     async stat(key) {
       const info = await fs.promises.stat(fileFor(key)).catch(() => null);
       return info && { size: info.size };

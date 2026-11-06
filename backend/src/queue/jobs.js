@@ -3,20 +3,24 @@
 // With REDIS_URL set, both run on BullMQ queues:
 //   - generation: one job per listing, survives restarts and deploys, retried up to 3 times with backoff,
 //     at most GENERATION_CONCURRENCY at a time;
+//   - haul: one job per haul video, one at a time per server because ffmpeg is heavy;
 //   - sync: a scheduled job every SYNC_INTERVAL_MINUTES. Only one runs at a time, even with several servers.
 // Without Redis, the same work runs inside the server process (fine for local development).
 import { Queue, Worker } from 'bullmq';
 import { config } from '../config/index.js';
-import { LISTING_STATUS } from '../config/constants.js';
+import { HAUL_STATUS, LISTING_STATUS } from '../config/constants.js';
 import { store } from '../db/index.js';
 import { resumeInterruptedGenerations, runGeneration, startGeneration } from '../services/generation.service.js';
+import { resumeInterruptedHauls, runHaul, startHaul } from '../services/haulPipeline.js';
 import { runSync, startSyncLoop } from '../services/marketplace.service.js';
 import { redis, redisEnabled } from './redis.js';
 import { log } from '../utils/logger.js';
 
 const GENERATION = 'velista-generation';
+const HAUL = 'velista-haul';
 const SYNC = 'velista-sync';
 const GENERATION_ATTEMPTS = 3;
+const HAUL_ATTEMPTS = 2;
 
 const queues = {};
 const workers = [];
@@ -60,6 +64,40 @@ async function requeueOrphanedGenerations() {
   if (stuck.length) log.info('queue', `Re-queued ${stuck.length} listing(s) stuck on generating`);
 }
 
+// ---------- hauls ----------
+
+async function addHaulJob(userId, haulId) {
+  await queue(HAUL).add('process', { userId, haulId }, {
+    jobId: `${haulId}-${Date.now()}`,
+    attempts: HAUL_ATTEMPTS,
+    backoff: { type: 'fixed', delay: 15_000 },
+    removeOnComplete: { count: 200 },
+    removeOnFail: { count: 200 },
+  });
+}
+
+// Never throws: if Redis is unreachable, the haul runs in-process instead.
+export async function enqueueHaul(userId, haulId) {
+  if (!redisEnabled()) return startHaul(userId, haulId);
+  try {
+    await addHaulJob(userId, haulId);
+  } catch (err) {
+    log.error('queue', 'Could not queue the haul, running it in-process', { haulId, err });
+    startHaul(userId, haulId);
+  }
+}
+
+async function requeueOrphanedHauls() {
+  const jobs = await queue(HAUL).getJobs(['waiting', 'active', 'delayed', 'prioritized', 'waiting-children']);
+  const queued = new Set(jobs.map((j) => j?.data?.haulId).filter(Boolean));
+  const stuck = [
+    ...await store.listHaulsByStatus(HAUL_STATUS.QUEUED),
+    ...await store.listHaulsByStatus(HAUL_STATUS.PROCESSING),
+  ].filter((h) => !queued.has(h.id));
+  for (const h of stuck) await addHaulJob(h.userId, h.id);
+  if (stuck.length) log.info('queue', `Re-queued ${stuck.length} interrupted haul(s)`);
+}
+
 // ---------- start / stop ----------
 
 function startWorkers() {
@@ -68,9 +106,14 @@ function startWorkers() {
     await runGeneration(userId, listingId, { finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts || 1) });
   }, { connection: redis(), prefix: config.queuePrefix, concurrency: config.generationConcurrency });
 
+  const haul = new Worker(HAUL, async (job) => {
+    const { userId, haulId } = job.data;
+    await runHaul(userId, haulId, { finalAttempt: job.attemptsMade + 1 >= (job.opts.attempts || 1) });
+  }, { connection: redis(), prefix: config.queuePrefix, concurrency: 1 });
+
   const sync = new Worker(SYNC, async () => runSync(), { connection: redis(), prefix: config.queuePrefix, concurrency: 1 });
 
-  for (const w of [generation, sync]) {
+  for (const w of [generation, haul, sync]) {
     w.on('failed', (job, err) => log.error('queue', 'Job failed', { queue: w.name, jobId: job?.id, attempt: job?.attemptsMade, err }));
     w.on('error', (err) => log.error('queue', 'Worker error', { queue: w.name, err }));
     workers.push(w);
@@ -81,6 +124,7 @@ function startWorkers() {
 export async function startBackgroundJobs() {
   if (!redisEnabled()) {
     await resumeInterruptedGenerations().catch((err) => log.error('generation', 'Resume failed', { err }));
+    await resumeInterruptedHauls().catch((err) => log.error('haul', 'Resume failed', { err }));
     startSyncLoop();
     return 'in-process';
   }
@@ -95,6 +139,7 @@ export async function startBackgroundJobs() {
     await queue(SYNC).removeJobScheduler('cross-delist');
   }
   await requeueOrphanedGenerations().catch((err) => log.error('queue', 'Recovery failed', { err }));
+  await requeueOrphanedHauls().catch((err) => log.error('queue', 'Haul recovery failed', { err }));
   return 'bullmq';
 }
 

@@ -129,6 +129,22 @@ export interface ListingSummary {
   endedReason?: string | null;
 }
 
+export type HaulStatus = 'uploading' | 'queued' | 'processing' | 'review' | 'failed';
+
+export interface Haul {
+  id: string;
+  status: HaulStatus;
+  step: string | null;
+  error: string | null;
+  itemCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface HaulDetail extends Haul {
+  listings: ListingSummary[];
+}
+
 export interface Issue {
   field: string;
   message: string;

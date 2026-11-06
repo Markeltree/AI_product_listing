@@ -32,7 +32,7 @@ src/
       editor/             Editor sections: ListingPreview, PhotosEditor, CategoryPicker, ShopDetailsSection...
     marketplaces/         EtsyCard, EbayCard, MarketplacesCard, MarketplaceMark
     navigation/           FloatingTabBar
-  hooks/                  Screen logic, such as useListingEditor (load, edit, save, publish)
+  hooks/                  Screen logic: useListingEditor (load, edit, save, publish), useHauls (upload, status)
   lib/                    API client, auth, rules, formatting, types
   theme.ts                Colors, spacing, radius, fonts, shadows
 ```

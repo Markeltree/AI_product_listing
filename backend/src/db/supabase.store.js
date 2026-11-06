@@ -89,6 +89,16 @@ export class SupabaseStore {
   async deleteHaul(userId, id) {
     await this.query('deleteHaul', this.table('hauls').delete().eq('id', id).eq('user_id', userId));
   }
+  async listHaulsByStatus(status) {
+    return (await this.query('listHaulsByStatus', this.table('hauls').select('*').eq('status', status)) || []).map(toHaul);
+  }
+  async listListingSummariesByHaul(userId, haulId) {
+    const data = await this.query(
+      'listListingSummariesByHaul',
+      this.table('listings').select('id, summary').eq('user_id', userId).eq('haul_id', haulId).order('created_at'),
+    );
+    return (data || []).map(toSummaryRow);
+  }
 
   // ---------- eBay connections ----------
 

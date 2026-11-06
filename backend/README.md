@@ -126,7 +126,9 @@ A haul is one video showing many products. The upload has three steps, and the A
 
 1. `POST /api/hauls` with `{ mime, size }` creates the haul and returns `upload: { method, url, headers }`.
 2. The app sends the file to `upload.url`.
-3. `POST /api/hauls/:id/complete` checks the file arrived and moves the haul to `queued`.
+3. `POST /api/hauls/:id/complete` checks the file arrived and queues the haul.
+
+The worker (`src/services/haulPipeline.js`) then samples 16 frames, asks the AI for the separate products, saves the 1 or 2 best frames of each at full size, and creates a draft listing per product. The haul moves to `review`, `GET /api/hauls/:id` returns its listings, and the video is deleted. Speech is read only when `OPENAI_API_KEY` is set. The worker runs in the API process because listing photos are on the same disk.
 
 With `S3_BUCKET` set, `upload.url` is a signed URL for the bucket (`src/storage/s3.js`). Without it, the URL points back to this API and the file goes to `UPLOAD_DIR` (`src/storage/local.js`), where Node's default 5 minute request limit applies. Listing photos stay in `UPLOAD_DIR` for now.
 

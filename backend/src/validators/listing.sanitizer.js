@@ -1,7 +1,7 @@
 // Turns untrusted listing input (from the editor, the mobile app or the AI) into clean values
 // that fit Etsy's limits. Never throws; bad values fall back or are dropped.
 import {
-  DEFAULT_SETTINGS, DESCRIPTION_MAX, LANGUAGES, TAG_MAX_COUNT, TAG_MAX_LENGTH, TITLE_MAX, TONES, WHEN_MADE, WHO_MADE,
+  DEFAULT_SETTINGS, DESCRIPTION_MAX, HAUL_PHOTOS_PER_ITEM, LANGUAGES, MAX_HAUL_ITEMS, TAG_MAX_COUNT, TAG_MAX_LENGTH, TITLE_MAX, TONES, WHEN_MADE, WHO_MADE,
 } from '../config/constants.js';
 import { toIntOrNull, toNumberOrNull } from '../utils/parse.js';
 import { clean, cleanMultiline, splitList } from '../utils/text.js';
@@ -72,6 +72,33 @@ export function sanitizeProduct(input = {}, settings = DEFAULT_SETTINGS) {
     shippingProfileId: toIntOrNull(input.shippingProfileId) ?? settings.defaultShippingProfileId ?? null,
     readinessStateId: toIntOrNull(input.readinessStateId) ?? settings.defaultReadinessStateId ?? null,
   };
+}
+
+const ORIGINS = ['observed', 'inferred', 'spoken', 'missing'];
+const ORIGIN_FIELDS = ['name', 'type', 'colors', 'materials', 'brand', 'size'];
+
+// Items the AI found in a haul video. Items without a name or a usable frame are dropped, because
+// a listing needs both. Frame numbers are checked against the frames that were actually sent.
+export function sanitizeHaulItems(input = {}, frameCount = 0) {
+  const items = Array.isArray(input.items) ? input.items : [];
+  return items.slice(0, MAX_HAUL_ITEMS).map((item) => {
+    const origins = Object.fromEntries(ORIGIN_FIELDS.map((f) => [f, oneOf(ORIGINS, item?.origins?.[f], 'missing')]));
+    const frames = [...new Set(Array.isArray(item?.frames) ? item.frames : [])]
+      .filter((n) => Number.isInteger(n) && n >= 0 && n < frameCount)
+      .slice(0, HAUL_PHOTOS_PER_ITEM);
+    return {
+      name: clean(item?.name, 140),
+      type: clean(item?.type, 80) || 'Item',
+      colors: clean(item?.colors, 160),
+      materials: clean(item?.materials, 160),
+      brand: clean(item?.brand, 80),
+      // Measurements are never guessed: only a size the seller said out loud is kept.
+      dimensions: origins.size === 'spoken' ? clean(item?.size, 160) : '',
+      notes: clean(item?.notes, 1000),
+      frames,
+      origins,
+    };
+  }).filter((item) => item.name && item.frames.length);
 }
 
 // AI suggestions from photo analysis, shaped like the wizard's details form. Unknown values become ''.

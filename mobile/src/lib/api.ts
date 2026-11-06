@@ -1,4 +1,5 @@
 import { Directory, File, Paths } from 'expo-file-system';
+import { FileSystemUploadType, uploadAsync } from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { API_URL } from './config';
 import { loadToken } from './session';
@@ -71,6 +72,23 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
     throw new ApiError(data?.error ?? `Request failed (${res.status}).`, res.status, data);
   }
   return data as T;
+}
+
+export type UploadTarget = { method: 'PUT'; url: string; headers: Record<string, string> };
+
+// Sends a large file to the address the server gave. Phones stream it from disk, so a long video is
+// never held in memory; the web preview has no such option and sends a Blob.
+export async function uploadFile(target: UploadTarget, uri: string): Promise<void> {
+  let status: number;
+  if (Platform.OS === 'web') {
+    const blob = await (await fetch(uri)).blob();
+    status = (await fetch(target.url, { method: target.method, headers: target.headers, body: blob })).status;
+  } else {
+    status = (await uploadAsync(target.url, uri, {
+      httpMethod: target.method, headers: target.headers, uploadType: FileSystemUploadType.BINARY_CONTENT,
+    })).status;
+  }
+  if (status >= 300) throw new ApiError(`The video could not be uploaded (${status}). Please try again.`, status);
 }
 
 export type LocalFile = { uri: string; name: string; type: string };

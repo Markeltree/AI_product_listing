@@ -69,7 +69,7 @@ alter table public.listings add constraint listings_status_check
 create table if not exists public.hauls (
   id           uuid primary key,
   user_id      uuid not null references public.users (id) on delete cascade,
-  status       text not null check (status in ('uploading', 'queued', 'failed')),
+  status       text not null,
   step         text,
   error        text,
   source_key   text not null,
@@ -80,7 +80,11 @@ create table if not exists public.hauls (
   updated_at   timestamptz not null default now()
 );
 create index if not exists hauls_user_created_idx on public.hauls (user_id, created_at desc);
+create index if not exists hauls_status_idx on public.hauls (status);
 alter table public.hauls enable row level security;
+alter table public.hauls drop constraint if exists hauls_status_check;
+alter table public.hauls add constraint hauls_status_check
+  check (status in ('uploading', 'queued', 'processing', 'review', 'failed'));
 
 -- Listings: link to their haul, and a small summary so the Listings tab need not load full records.
 alter table public.listings add column if not exists haul_id uuid references public.hauls (id) on delete set null;

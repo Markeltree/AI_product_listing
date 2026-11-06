@@ -1,11 +1,12 @@
-// A haul is one video showing many products. This file covers its upload; turning a queued haul into
-// draft listings is the job of the haul worker.
+// A haul is one video showing many products. This file covers its upload; haulPipeline.js turns a
+// queued haul into draft listings.
 //   POST /api/hauls               creates the haul and returns where to upload the video
 //   PUT  <upload.url>             the phone sends the file
 //   POST /api/hauls/:id/complete  the server checks the file arrived and queues the haul
 import { randomUUID } from 'node:crypto';
 import { HAUL_STATUS, HAUL_UPLOAD_TTL_MS, MAX_HAUL_VIDEO_BYTES, VIDEO_MIME } from '../config/constants.js';
 import { store } from '../db/index.js';
+import { enqueueHaul } from '../queue/jobs.js';
 import { storage } from '../storage/index.js';
 import { HttpError, badRequest, conflict, notFound } from '../utils/errors.js';
 import { now } from '../utils/parse.js';
@@ -88,10 +89,17 @@ export async function completeUpload(userId, haulId) {
   }
   haul.status = HAUL_STATUS.QUEUED;
   haul.sourceSize = file.size;
-  return toPublicHaul(await saveHaul(haul));
+  await saveHaul(haul);
+  await enqueueHaul(userId, haulId);
+  return toPublicHaul(haul);
 }
 
-export const getHaul = async (userId, haulId) => toPublicHaul(await getHaulOrThrow(userId, haulId));
+// The haul with the draft listings made from it.
+export async function getHaul(userId, haulId) {
+  const haul = await getHaulOrThrow(userId, haulId);
+  const rows = await store.listListingSummariesByHaul(userId, haulId);
+  return { ...toPublicHaul(haul), listings: rows.map((row) => row.summary).filter(Boolean) };
+}
 
 export const listHauls = async (userId) => (await store.listHauls(userId)).map(toPublicHaul);
 
