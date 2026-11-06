@@ -11,6 +11,7 @@ import {
   buildAuthorizeUrl, createLocation, ebayConfigured, exchangeCodeForTokens, fetchEbayUser, fetchLocations, fetchPolicies,
   setupProblem, tokensToConnection,
 } from './ebay/index.js';
+import { log } from '../utils/logger.js';
 
 const TICKET_PURPOSE = 'ebay-connect';
 export const callbackUrl = () => `${config.appUrl}/api/ebay/callback`;
@@ -62,7 +63,7 @@ export async function completeConnect(state, code) {
   try {
     conn.prefs = await autoSetup(conn);
   } catch (err) {
-    console.error('[ebay] auto setup failed:', err.message);
+    log.error('ebay', 'Auto setup failed', { err });
   }
   await store.saveEbayConnection(conn);
   return setupProblem(conn.prefs);

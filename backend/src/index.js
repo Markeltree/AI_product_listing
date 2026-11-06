@@ -6,6 +6,7 @@ import { config, integrations } from './config/index.js';
 import { initStore } from './db/index.js';
 import { startBackgroundJobs, stopBackgroundJobs } from './queue/jobs.js';
 import { closeRedis } from './queue/redis.js';
+import { log } from './utils/logger.js';
 
 export const app = createApp();
 
@@ -15,8 +16,8 @@ export async function start() {
   await initStore();
   const jobs = await startBackgroundJobs();
   const server = app.listen(config.port, () => {
-    console.log(`Velista Listing AI running at ${config.appUrl} (background jobs: ${jobs})`);
-    console.log('Integrations:', JSON.stringify(integrations()));
+    log.info('server', `Velista Listing AI running at ${config.appUrl}`, { jobs });
+    log.info('server', 'Integrations', integrations());
   });
   return server;
 }
@@ -26,7 +27,7 @@ let stopping = false;
 async function shutdown(signal, server) {
   if (stopping) return;
   stopping = true;
-  console.log(`[server] ${signal} received, shutting down`);
+  log.info('server', `${signal} received, shutting down`);
   server?.close();
   await stopBackgroundJobs();
   await closeRedis();
@@ -40,7 +41,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
       for (const signal of ['SIGTERM', 'SIGINT']) process.on(signal, () => shutdown(signal, server));
     })
     .catch((err) => {
-      console.error(err);
+      log.error('server', 'Shutdown failed', { err });
       process.exit(1);
     });
 }

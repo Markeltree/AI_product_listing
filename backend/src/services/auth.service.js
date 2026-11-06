@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { DEFAULT_SETTINGS } from '../config/constants.js';
+import { config } from '../config/index.js';
 import { store } from '../db/index.js';
 import { HttpError, conflict } from '../utils/errors.js';
 import { now } from '../utils/parse.js';
@@ -10,6 +11,9 @@ import { withDefaults } from './settings.service.js';
 export const publicUser = (u) => ({ id: u.id, name: u.name, email: u.email, settings: withDefaults(u.settings) });
 
 export async function signup({ name, email, password }) {
+  if (config.signupAllowlist.length && !config.signupAllowlist.includes(email.toLowerCase())) {
+    throw new HttpError(403, 'Velista is invite-only for now. Ask the team for access.');
+  }
   if (await store.findUserByEmail(email)) {
     throw conflict('An account with this email already exists. Sign in instead.');
   }

@@ -1,3 +1,9 @@
+import { config } from '../config/index.js';
+import { decryptSecret, encryptSecret } from '../utils/secrets.js';
+
+const reveal = (value) => decryptSecret(value, config.tokenEncryptionKey);
+const protect = (value) => encryptSecret(value, config.tokenEncryptionKey);
+
 const parseJson = (value, fallback) => (typeof value === 'string' ? JSON.parse(value || 'null') ?? fallback : value ?? fallback);
 
 export const toUser = (r) =>
@@ -15,8 +21,8 @@ export const toListing = (r) => r && parseJson(r.data, null);
 export const toConnection = (r) =>
   r && {
     userId: r.user_id,
-    accessToken: r.access_token,
-    refreshToken: r.refresh_token,
+    accessToken: reveal(r.access_token),
+    refreshToken: reveal(r.refresh_token),
     expiresAt: Number(r.expires_at),
     etsyUserId: r.etsy_user_id == null ? null : Number(r.etsy_user_id),
     shopId: r.shop_id == null ? null : Number(r.shop_id),
@@ -27,8 +33,8 @@ export const toConnection = (r) =>
 export const toEbayConnection = (r) =>
   r && {
     userId: r.user_id,
-    accessToken: r.access_token,
-    refreshToken: r.refresh_token,
+    accessToken: reveal(r.access_token),
+    refreshToken: reveal(r.refresh_token),
     expiresAt: Number(r.expires_at),
     refreshExpiresAt: r.refresh_expires_at == null ? null : Number(r.refresh_expires_at),
     ebayUserId: r.ebay_user_id || null,
@@ -64,8 +70,8 @@ export const listingRow = (l) => ({
 
 export const connectionRow = (c) => ({
   user_id: c.userId,
-  access_token: c.accessToken,
-  refresh_token: c.refreshToken,
+  access_token: protect(c.accessToken),
+  refresh_token: protect(c.refreshToken),
   expires_at: c.expiresAt,
   etsy_user_id: c.etsyUserId ?? null,
   shop_id: c.shopId ?? null,
@@ -75,8 +81,8 @@ export const connectionRow = (c) => ({
 
 export const ebayConnectionRow = (c) => ({
   user_id: c.userId,
-  access_token: c.accessToken,
-  refresh_token: c.refreshToken,
+  access_token: protect(c.accessToken),
+  refresh_token: protect(c.refreshToken),
   expires_at: c.expiresAt,
   refresh_expires_at: c.refreshExpiresAt ?? null,
   ebay_user_id: c.ebayUserId ?? null,

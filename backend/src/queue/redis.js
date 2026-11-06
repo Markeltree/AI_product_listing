@@ -2,6 +2,7 @@
 // Redis is optional: without REDIS_URL the server runs background work in-process, as before.
 import { Redis } from 'ioredis';
 import { config } from '../config/index.js';
+import { log } from '../utils/logger.js';
 
 let client = null;
 
@@ -18,12 +19,12 @@ export function redis() {
     let lastError = '';
     client.on('error', (err) => {
       // Log each distinct failure once instead of on every reconnect attempt.
-      if (err.message !== lastError) console.error('[redis]', err.message);
+      if (err.message !== lastError) log.error('redis', err.message);
       lastError = err.message;
     });
     client.on('ready', () => {
       lastError = '';
-      console.log('[redis] connected');
+      log.info('redis', 'Connected');
     });
   }
   return client;

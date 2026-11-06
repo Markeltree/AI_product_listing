@@ -1,17 +1,36 @@
-import React from 'react';
+import React from "react";
 import {
-  KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type StyleProp, type ViewStyle,
-} from 'react-native';
-import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
-import { TAB_BAR_SPACE, colors, space } from '@/theme';
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
+import { SafeAreaView, type Edge } from "react-native-safe-area-context";
+import { TAB_BAR_SPACE, colors, space } from "@/theme";
 
 // Page container: safe area, keyboard avoidance, and room at the bottom for the floating tab bar.
 export function Screen({
-  children, scroll = true, edges = ['top'], padded = true, style,
-}: { children: React.ReactNode; scroll?: boolean; edges?: Edge[]; padded?: boolean; style?: StyleProp<ViewStyle> }) {
+  children,
+  scroll = true,
+  edges = ["top"],
+  padded = true,
+  style,
+}: {
+  children: React.ReactNode;
+  scroll?: boolean;
+  edges?: Edge[];
+  padded?: boolean;
+  style?: StyleProp<ViewStyle>;
+}) {
   const body = scroll ? (
     <ScrollView
-      contentContainerStyle={[padded && styles.pad, { paddingBottom: TAB_BAR_SPACE + space.lg }]}
+      contentContainerStyle={[
+        padded && styles.pad,
+        { paddingBottom: TAB_BAR_SPACE + space.lg },
+      ]}
       keyboardShouldPersistTaps="handled"
       showsVerticalScrollIndicator={false}
     >
@@ -22,7 +41,10 @@ export function Screen({
   );
   return (
     <SafeAreaView style={[styles.screen, style]} edges={edges}>
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
         {body}
       </KeyboardAvoidingView>
     </SafeAreaView>

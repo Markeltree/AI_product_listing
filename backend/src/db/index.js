@@ -3,6 +3,7 @@
 import path from 'node:path';
 import { config } from '../config/index.js';
 import { SqliteStore } from './sqlite.store.js';
+import { log } from '../utils/logger.js';
 
 export const store = {};
 
@@ -13,10 +14,10 @@ async function createStore() {
     const client = createClient(config.supabase.url, config.supabase.serviceKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    console.log('[db] using Supabase');
+    log.info('db', 'Using Supabase');
     return new SupabaseStore(client);
   }
-  console.log(`[db] using local SQLite at ${path.join(config.dataDir, 'velista.db')} (set SUPABASE_URL to switch)`);
+  log.info('db', `Using local SQLite at ${path.join(config.dataDir, 'velista.db')} (set SUPABASE_URL to switch)`);
   return new SqliteStore(path.join(config.dataDir, 'velista.db'));
 }
 

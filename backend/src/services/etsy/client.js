@@ -1,6 +1,7 @@
 // Generic Etsy Open API v3 request helper. Refreshes the user's access token when it is about to expire.
 import { config } from '../../config/index.js';
 import { store } from '../../db/index.js';
+import { isGrantRejected, refreshOnce } from '../tokenRefresh.js';
 import {
   EtsyError, assertEtsyConfigured, etsyFetch, refreshTokens, tokensToConnection,
 } from './oauth.js';
@@ -16,11 +17,18 @@ async function freshConnection(userId) {
   const conn = await store.getConnection(userId);
   if (!conn) throw new EtsyError(401, 'Etsy is not connected. Connect your shop in Settings first.');
   if (conn.expiresAt - Date.now() > REFRESH_MARGIN_MS) return conn;
+  return refreshOnce(`etsy:${userId}`, () => renewConnection(userId, conn));
+}
+
+async function renewConnection(userId, conn) {
   let tokens;
   try {
     tokens = await refreshTokens(conn.refreshToken);
-  } catch {
-    // Etsy revoked or expired the grant. Drop the stale connection so the user is asked to reconnect.
+  } catch (err) {
+    if (!isGrantRejected(err)) throw new EtsyError(503, 'Etsy could not be reached just now. Your shop is still connected, so please try again.');
+    // Another server may have just renewed this token. Use its copy instead of disconnecting the shop.
+    const latest = await store.getConnection(userId);
+    if (latest && latest.refreshToken !== conn.refreshToken) return latest;
     await store.deleteConnection(userId);
     throw new EtsyError(401, 'Your Etsy connection has expired. Reconnect your shop in Settings.');
   }

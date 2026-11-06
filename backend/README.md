@@ -112,17 +112,24 @@ test/
 | Rate limits | `src/middleware/rateLimit.js` | Whole API 1000/min per IP; failed sign-ins 10 per 15 min per IP and email; sign-ups 5/hour per IP; AI calls 60/hour per user; Etsy/eBay actions 60 per 10 min per user; "Check sales now" 6/min. Uses the real client IP behind Railway (`TRUST_PROXY`). |
 | Input validation | `src/validators/schemas.js`, `src/middleware/validate.js` | zod schemas for every JSON body, query and URL id: types, lengths, allowed values; unknown keys dropped. Bad ids return 404 before touching the database. |
 | XSS | `src/utils/text.js` | HTML tags, script blocks and control characters are stripped from all stored text; eBay HTML descriptions are escaped; the one HTML page escapes everything it prints. |
+| Token encryption | `src/utils/secrets.js`, `src/db/mappers.js` | With `TOKEN_ENCRYPTION_KEY` set, Etsy and eBay tokens are stored with AES-256-GCM. Older plain tokens stay readable and are encrypted when next saved. If the key is lost, sellers must reconnect. Every server using the same database needs the same key. |
+
+## Reliability and debugging
+
+- **Marketplace calls** go through `src/utils/http.js`: a 60 second limit per attempt and up to 3 attempts. A 429 is always retried. After a 5xx or a lost connection only GET and PUT are retried, because repeating a POST could create a duplicate listing.
+- **Token refresh** (`src/services/tokenRefresh.js`): a seller is only disconnected when the marketplace answers `invalid_grant`. Any other failure keeps the connection and returns a 503.
+- **Logs** use `src/utils/logger.js`: JSON lines in production, readable text locally, secrets masked. Each API response has an `X-Request-Id`, and 500 errors return it as `requestId`. Search that id in Railway logs to see everything the request did.
 
 ## Tests
 
 ```bash
-npm test                  # unit tests + security tests (headers, validation, XSS, rate limits)
+npm test                  # unit, security and reliability tests
 npm run test:crosslist    # end-to-end Etsy + eBay flow against the mocks, in a throwaway database
 ```
 
 ## Before going live
 
-- **Signups.** Anyone who can reach the API can create an account and spend AI credits. Limit signups before sharing the URL publicly.
+- **Signups.** Anyone who can reach the API can create an account and spend AI credits. Set `ALLOWED_SIGNUP_EMAILS` before sharing the URL publicly.
 - **Files.** Media is stored on disk (`UPLOAD_DIR`). For more than one server, move it to object storage such as S3.
 - **Background work.** With `REDIS_URL`, generation and sync run on BullMQ (`src/queue/`); without it they run in-process, which is fine for local development.
 - **Costs.** Each listing makes one vision request (up to 8 images) plus one transcription when a voice note is attached. Each active Etsy listing costs the seller Etsy's listing fee.

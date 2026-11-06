@@ -1,6 +1,7 @@
 // Generic eBay REST request helper. Refreshes the seller's access token when it is about to expire.
 import { config } from '../../config/index.js';
 import { store } from '../../db/index.js';
+import { isGrantRejected, refreshOnce } from '../tokenRefresh.js';
 import {
   EbayError, assertEbayConfigured, ebayFetch, getAppToken, refreshTokens, tokensToConnection,
 } from './oauth.js';
@@ -11,11 +12,18 @@ export async function freshEbayConnection(userId) {
   const conn = await store.getEbayConnection(userId);
   if (!conn) throw new EbayError(409, 'eBay is not connected. Connect your eBay account in Settings first.');
   if (conn.expiresAt - Date.now() > REFRESH_MARGIN_MS) return conn;
+  return refreshOnce(`ebay:${userId}`, () => renewConnection(userId, conn));
+}
+
+async function renewConnection(userId, conn) {
   let tokens;
   try {
     tokens = await refreshTokens(conn.refreshToken);
-  } catch {
-    // The grant was revoked or expired (refresh tokens last about 18 months). Ask the user to reconnect.
+  } catch (err) {
+    if (!isGrantRejected(err)) throw new EbayError(503, 'eBay could not be reached just now. Your account is still connected, so please try again.');
+    // Another server may have just renewed this token. Use its copy instead of disconnecting the seller.
+    const latest = await store.getEbayConnection(userId);
+    if (latest && latest.refreshToken !== conn.refreshToken) return latest;
     await store.deleteEbayConnection(userId);
     throw new EbayError(401, 'Your eBay connection has expired. Reconnect eBay in Settings.');
   }

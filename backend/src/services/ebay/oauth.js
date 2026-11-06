@@ -3,6 +3,7 @@
 // Docs: https://developer.ebay.com/api-docs/static/oauth-authorization-code-grant.html
 import { config } from '../../config/index.js';
 import { HttpError } from '../../utils/errors.js';
+import { fetchWithRetry } from '../../utils/http.js';
 
 export class EbayError extends HttpError {}
 
@@ -14,10 +15,10 @@ export function assertEbayConfigured() {
   }
 }
 
-// fetch() that reports network failures as a 502 the user can read.
+// fetchWithRetry() that reports network failures as a 502 the user can read.
 export async function ebayFetch(url, options) {
   try {
-    return await fetch(url, options);
+    return await fetchWithRetry(url, options, { service: 'ebay' });
   } catch (err) {
     throw new EbayError(502, `Could not reach eBay: ${err.cause?.message || err.message}`);
   }
@@ -47,7 +48,9 @@ async function tokenRequest(params) {
   let json = null;
   try { json = JSON.parse(text); } catch { /* not JSON */ }
   if (!res.ok || !json?.access_token) {
-    throw new EbayError(res.status || 502, `eBay rejected the token request: ${json?.error_description || json?.error || text.slice(0, 200)}`);
+    const err = new EbayError(res.status || 502, `eBay rejected the token request: ${json?.error_description || json?.error || text.slice(0, 200)}`);
+    err.oauthError = json?.error;
+    throw err;
   }
   return json;
 }

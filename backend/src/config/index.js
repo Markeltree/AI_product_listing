@@ -90,6 +90,11 @@ export const config = {
     };
   })(),
 
+  // Encrypts Etsy and eBay tokens in the database. Keep it safe: if it is lost, sellers must reconnect.
+  tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY || '',
+  // Comma-separated emails allowed to sign up. Empty means anyone can.
+  signupAllowlist: (process.env.ALLOWED_SIGNUP_EMAILS || '').split(',').map((e) => e.trim().toLowerCase()).filter(Boolean),
+
   // Redis (optional). When set, generation and the cross-delist sync run on BullMQ queues and rate-limit
   // counters are shared between servers. Railway: use the Redis service's REDIS_URL reference variable.
   redisUrl: process.env.REDIS_URL || '',
@@ -117,4 +122,5 @@ export const integrations = () => ({
   etsy: Boolean(config.etsy.apiKey),
   ebay: Boolean(config.ebay.clientId && config.ebay.clientSecret && config.ebay.ruName),
   queue: config.redisUrl ? 'bullmq' : 'in-process',
+  tokenEncryption: Boolean(config.tokenEncryptionKey),
 });

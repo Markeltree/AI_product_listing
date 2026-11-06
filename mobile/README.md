@@ -19,7 +19,7 @@ npm install
 npx expo start
 ```
 
-Expo Router reads routes from `src/app/`. Screens there hold state and API calls; the UI they render lives in `src/components`:
+Expo Router reads routes from `src/app/`. Screens there hold state and API calls, or use a hook from `src/hooks` when the logic is large; the UI they render lives in `src/components`:
 
 ```
 src/
@@ -32,6 +32,7 @@ src/
       editor/             Editor sections: ListingPreview, PhotosEditor, CategoryPicker, ShopDetailsSection...
     marketplaces/         EtsyCard, EbayCard, MarketplacesCard, MarketplaceMark
     navigation/           FloatingTabBar
+  hooks/                  Screen logic, such as useListingEditor (load, edit, save, publish)
   lib/                    API client, auth, rules, formatting, types
   theme.ts                Colors, spacing, radius, fonts, shadows
 ```

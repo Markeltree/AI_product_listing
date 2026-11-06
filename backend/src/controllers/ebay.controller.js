@@ -2,6 +2,7 @@ import * as ebayConnection from '../services/ebayConnection.service.js';
 import { assertCallbackReachable, publicOrigin, returnToFromState, returnUrl, safeReturnTo } from '../services/connectLinks.js';
 import { ebayConfigured, suggestCategories } from '../services/ebay/index.js';
 import { requireAuth } from '../middleware/auth.js';
+import { log } from '../utils/logger.js';
 
 export async function status(req, res) {
   res.json(await ebayConnection.getStatus(req.user.id));
@@ -45,7 +46,7 @@ export async function callback(req, res) {
     const problem = await ebayConnection.completeConnect(state, String(req.query.code));
     back(problem ? `ebay=connected&warning=${encodeURIComponent(problem)}` : 'ebay=connected');
   } catch (err) {
-    console.error('[ebay callback]', err);
+    log.error('ebay', 'Connect callback failed', { err });
     fail(err.message || 'Could not connect to eBay.');
   }
 }

@@ -19,6 +19,10 @@ export function setUnauthorizedHandler(fn: (() => void) | null) {
   unauthorizedHandler = fn;
 }
 
+// Limits for a request that never finishes. Uploads get longer because videos are large.
+const REQUEST_TIMEOUT_MS = 120_000;
+const UPLOAD_TIMEOUT_MS = 300_000;
+
 type Options = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
@@ -38,17 +42,23 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
     body = JSON.stringify(opts.body);
   }
 
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), opts.form ? UPLOAD_TIMEOUT_MS : REQUEST_TIMEOUT_MS);
   let res: Response;
+  let text: string;
   try {
-    res = await fetch(`${API_URL}${path}`, { method: opts.method ?? 'GET', headers, body });
+    res = await fetch(`${API_URL}${path}`, { method: opts.method ?? 'GET', headers, body, signal: controller.signal });
+    text = await res.text();
   } catch (e) {
+    if (controller.signal.aborted) throw new ApiError('This is taking too long. Check your connection and try again.', 0);
     // Keep the underlying reason: "Network request failed" means the server is unreachable,
     // anything else is a problem building the request on the phone.
     const reason = e instanceof Error && e.message ? ` (${e.message})` : '';
     throw new ApiError(`Cannot reach Velista at ${API_URL}${reason}. Check your connection and the server address.`, 0);
+  } finally {
+    clearTimeout(timer);
   }
 
-  const text = await res.text();
   let data: any = null;
   try {
     data = text ? JSON.parse(text) : null;

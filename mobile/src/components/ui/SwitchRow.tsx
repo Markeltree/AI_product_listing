@@ -1,12 +1,18 @@
-import React from 'react';
-import {
-  StyleSheet, Switch, Text, View,
-} from 'react-native';
-import { colors, font, space } from '@/theme';
+import React from "react";
+import { StyleSheet, Switch, Text, View } from "react-native";
+import { colors, font, space } from "@/theme";
 
 // Label (and optional hint) with an on/off switch on the right.
-export function SwitchRow({ label, hint, value, onChange }: {
-  label: string; hint?: string; value: boolean; onChange: (v: boolean) => void;
+export function SwitchRow({
+  label,
+  hint,
+  value,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
 }) {
   return (
     <View style={styles.row}>
@@ -26,6 +32,11 @@ export function SwitchRow({ label, hint, value, onChange }: {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: 4 },
-  label: { fontSize: 15, fontWeight: '600', color: colors.ink },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: space.md,
+    paddingVertical: 4,
+  },
+  label: { fontSize: 15, fontWeight: "600", color: colors.ink },
 });

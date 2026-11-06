@@ -1,5 +1,6 @@
 import multer from 'multer';
 import { HttpError } from '../utils/errors.js';
+import { currentRequestId, log } from '../utils/logger.js';
 
 export function apiNotFound(_req, res) {
   res.status(404).json({ error: 'Not found.' });
@@ -16,6 +17,6 @@ export function errorHandler(err, _req, res, _next) {
   if (err instanceof HttpError) return res.status(err.status).json({ error: err.message, ...err.details });
   // Errors from libraries (for example express.json on a bad body) carry a 4xx status.
   if (err.status && err.status < 500) return res.status(err.status).json({ error: err.message });
-  console.error('[server error]', err);
-  res.status(500).json({ error: 'Something went wrong on our side. Please try again.' });
+  log.error('api', 'Unhandled error', { err });
+  res.status(500).json({ error: 'Something went wrong on our side. Please try again.', requestId: currentRequestId() });
 }

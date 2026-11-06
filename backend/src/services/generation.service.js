@@ -8,13 +8,14 @@ import { extractVideoFrames, generateContent, transcribeAudio } from './ai/index
 import { hydrate, listingDir } from './media.service.js';
 import { findListing, updateListing } from './listing.repository.js';
 import { getUserSettings } from './settings.service.js';
+import { log } from '../utils/logger.js';
 
 // Generation runs inside the server process, so a restart or deploy in the middle of one would leave the
 // listing stuck on "generating". Called at startup to run those again.
 export async function resumeInterruptedGenerations() {
   const stuck = await store.listListingsByStatus(LISTING_STATUS.GENERATING);
   for (const l of stuck) {
-    console.log(`[generation] resuming ${l.id} (interrupted by a restart)`);
+    log.info('generation', 'Resuming after a restart', { listingId: l.id });
     startGeneration(l.userId, l.id);
   }
   return stuck.length;
@@ -22,7 +23,7 @@ export async function resumeInterruptedGenerations() {
 
 // Fire and forget. Errors are recorded on the listing by runGeneration, so this only logs the unexpected.
 export function startGeneration(userId, listingId) {
-  runGeneration(userId, listingId).catch((err) => console.error('[generation]', err));
+  runGeneration(userId, listingId).catch((err) => log.error('generation', 'Generation failed', { listingId, err }));
 }
 
 async function readFrames(video, outDir, warnings) {
@@ -32,7 +33,7 @@ async function readFrames(video, outDir, warnings) {
     if (!frames.length) warnings.push('No frames could be read from the video. Try a different clip or add a photo.');
     return frames;
   } catch (err) {
-    console.error('[generation] frame extraction failed:', err.message);
+    log.warn('generation', 'Frame extraction failed', { err });
     warnings.push('Could not read frames from the video. Make sure ffmpeg is installed on the server.');
     return [];
   }
@@ -76,8 +77,11 @@ export async function runGeneration(userId, listingId, { finalAttempt = true } =
     const result = await generateContent({ listing: hydrated, settings, frames, transcript });
 
     const allWarnings = [...warnings, ...result.analysis.warnings];
-    console.log(`[generation] ${listingId} written by ${result.analysis.source === 'ai' ? result.analysis.provider : 'template'}`
-      + (allWarnings.length ? ` - ${allWarnings.join(' | ')}` : ''));
+    log.info('generation', 'Listing written', {
+      listingId,
+      writer: result.analysis.source === 'ai' ? result.analysis.provider : 'template',
+      warnings: allWarnings.length ? allWarnings : undefined,
+    });
     await updateListing(userId, listingId, (l) => {
       l.content = result.content;
       l.analysis = {
@@ -91,7 +95,7 @@ export async function runGeneration(userId, listingId, { finalAttempt = true } =
       l.error = null;
     });
   } catch (err) {
-    console.error(`[generation] ${listingId} failed${finalAttempt ? '' : ', will retry'}:`, err.message);
+    log.error('generation', finalAttempt ? 'Generation failed' : 'Generation failed, will retry', { listingId, err });
     if (!finalAttempt) {
       await updateListing(userId, listingId, (l) => { l.step = 'Had a problem, trying again shortly'; }).catch(() => {});
       throw err;

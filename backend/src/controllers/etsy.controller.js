@@ -3,6 +3,7 @@ import { etsyConfigured, searchTaxonomy } from '../services/etsy/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config/index.js';
 import { assertCallbackReachable, publicOrigin } from '../services/connectLinks.js';
+import { log } from '../utils/logger.js';
 
 export async function status(req, res) {
   res.json(await etsyConnection.getStatus(req.user.id));
@@ -47,7 +48,7 @@ export async function callback(req, res) {
     const warning = await etsyConnection.completeConnect(state, String(req.query.code || ''));
     back(warning ? `etsy=connected&warning=${encodeURIComponent(warning)}` : 'etsy=connected');
   } catch (err) {
-    console.error('[etsy callback]', err);
+    log.error('etsy', 'Connect callback failed', { err });
     fail(err.message || 'Could not connect to Etsy.');
   }
 }

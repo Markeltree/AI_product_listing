@@ -10,6 +10,7 @@ import { checkSizes, removeUploadedFiles, removeUploadFolder } from '../middlewa
 import { HttpError, badRequest, notFound } from '../utils/errors.js';
 import { parseJsonField } from '../utils/parse.js';
 import { validateListing } from '../validators/listing.validator.js';
+import { log } from '../utils/logger.js';
 
 // Every endpoint that returns a full listing also returns its current validation issues.
 const withIssues = (listing) => ({ listing, issues: validateListing(listing) });
@@ -79,7 +80,7 @@ export async function analyze(req, res) {
       try {
         frames = await extractVideoFrames(video.path, path.join(listingDir(req.user.id, req.listingId), 'frames'));
       } catch (err) {
-        console.error('[analyze] frame extraction failed:', err.message);
+        log.warn('analyze', 'Frame extraction failed', { err });
       }
       if (!frames.length && !images.length) throw new HttpError(422, 'Could not read frames from your video. Try another clip or add a photo.');
     }

@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test test/unit.test.js test/security.test.js",
+    "test": "node --test test/unit.test.js test/security.test.js test/reliability.test.js",
     "etsy:invite": "node src/scripts/etsy-invite.js",
     "test:crosslist": "node test/crosslist-e2e.mjs",
     "mock:etsy": "node test/mock-etsy/server.mjs",

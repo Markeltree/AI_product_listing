@@ -12,6 +12,7 @@ import { store } from '../db/index.js';
 import { resumeInterruptedGenerations, runGeneration, startGeneration } from '../services/generation.service.js';
 import { runSync, startSyncLoop } from '../services/marketplace.service.js';
 import { redis, redisEnabled } from './redis.js';
+import { log } from '../utils/logger.js';
 
 const GENERATION = 'velista-generation';
 const SYNC = 'velista-sync';
@@ -44,7 +45,7 @@ export async function enqueueGeneration(userId, listingId) {
   try {
     await addGenerationJob(userId, listingId);
   } catch (err) {
-    console.error(`[queue] could not queue ${listingId}, running it in-process:`, err.message);
+    log.error('queue', 'Could not queue the job, running it in-process', { listingId, err });
     startGeneration(userId, listingId);
   }
 }
@@ -56,7 +57,7 @@ async function requeueOrphanedGenerations() {
   const queued = new Set(jobs.map((j) => j?.data?.listingId).filter(Boolean));
   const stuck = (await store.listListingsByStatus(LISTING_STATUS.GENERATING)).filter((l) => !queued.has(l.id));
   for (const l of stuck) await addGenerationJob(l.userId, l.id);
-  if (stuck.length) console.log(`[queue] re-queued ${stuck.length} listing(s) stuck on generating`);
+  if (stuck.length) log.info('queue', `Re-queued ${stuck.length} listing(s) stuck on generating`);
 }
 
 // ---------- start / stop ----------
@@ -70,8 +71,8 @@ function startWorkers() {
   const sync = new Worker(SYNC, async () => runSync(), { connection: redis(), prefix: config.queuePrefix, concurrency: 1 });
 
   for (const w of [generation, sync]) {
-    w.on('failed', (job, err) => console.error(`[queue] ${w.name} job ${job?.id} failed (attempt ${job?.attemptsMade}):`, err.message));
-    w.on('error', (err) => console.error(`[queue] ${w.name} worker:`, err.message));
+    w.on('failed', (job, err) => log.error('queue', 'Job failed', { queue: w.name, jobId: job?.id, attempt: job?.attemptsMade, err }));
+    w.on('error', (err) => log.error('queue', 'Worker error', { queue: w.name, err }));
     workers.push(w);
   }
 }
@@ -79,7 +80,7 @@ function startWorkers() {
 // Called once at startup. Returns 'bullmq' or 'in-process'.
 export async function startBackgroundJobs() {
   if (!redisEnabled()) {
-    await resumeInterruptedGenerations().catch((err) => console.error('[generation] resume failed:', err));
+    await resumeInterruptedGenerations().catch((err) => log.error('generation', 'Resume failed', { err }));
     startSyncLoop();
     return 'in-process';
   }
@@ -89,11 +90,11 @@ export async function startBackgroundJobs() {
       name: 'sync',
       opts: { removeOnComplete: { count: 50 }, removeOnFail: { count: 50 } },
     });
-    console.log(`[queue] cross-delist check every ${Math.round(config.syncIntervalMs / 60000)} min (BullMQ)`);
+    log.info('queue', `Cross-delist check every ${Math.round(config.syncIntervalMs / 60000)} min (BullMQ)`);
   } else {
     await queue(SYNC).removeJobScheduler('cross-delist');
   }
-  await requeueOrphanedGenerations().catch((err) => console.error('[queue] recovery failed:', err.message));
+  await requeueOrphanedGenerations().catch((err) => log.error('queue', 'Recovery failed', { err }));
   return 'bullmq';
 }
 

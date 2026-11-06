@@ -3,6 +3,7 @@
 import crypto from 'node:crypto';
 import { config } from '../../config/index.js';
 import { HttpError } from '../../utils/errors.js';
+import { fetchWithRetry } from '../../utils/http.js';
 
 export class EtsyError extends HttpError {}
 
@@ -12,10 +13,10 @@ export function assertEtsyConfigured() {
   if (!etsyConfigured()) throw new EtsyError(503, 'Etsy is not configured. Add ETSY_API_KEY to your .env file.');
 }
 
-// fetch() that reports network failures as a 502 the user can read.
+// fetchWithRetry() that reports network failures as a 502 the user can read.
 export async function etsyFetch(url, options) {
   try {
-    return await fetch(url, options);
+    return await fetchWithRetry(url, options, { service: 'etsy' });
   } catch (err) {
     throw new EtsyError(502, `Could not reach Etsy: ${err.cause?.message || err.message}`);
   }
@@ -51,7 +52,9 @@ async function tokenRequest(params) {
   let json = null;
   try { json = JSON.parse(text); } catch { /* not JSON */ }
   if (!res.ok || !json?.access_token) {
-    throw new EtsyError(res.status || 502, `Etsy rejected the token request: ${json?.error_description || json?.error || text.slice(0, 200)}`);
+    const err = new EtsyError(res.status || 502, `Etsy rejected the token request: ${json?.error_description || json?.error || text.slice(0, 200)}`);
+    err.oauthError = json?.error;
+    throw err;
   }
   return json;
 }

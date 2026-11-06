@@ -12,6 +12,7 @@ import {
 } from './ebay/index.js';
 import { hydrate } from './media.service.js';
 import { assertNotGenerating, getListingOrThrow, updateListing } from './listing.repository.js';
+import { log } from '../utils/logger.js';
 
 // A marketplace copy is "live" once it was published there and has not been ended since.
 // Older Etsy records have no `state`, so a publish date stands in for it.
@@ -207,11 +208,11 @@ export async function runSync({ userId = null } = {}) {
     try {
       const action = await syncListing(listing);
       if (action) {
-        console.log(`[sync] ${listing.id}: ${action}`);
+        log.info('sync', action, { listingId: listing.id });
         results.push({ id: listing.id, title: listing.content?.title, action });
       }
     } catch (err) {
-      console.error(`[sync] ${listing.id} failed:`, err.message);
+      log.error('sync', 'Listing check failed', { listingId: listing.id, err });
       await updateListing(listing.userId, listing.id, (l) => {
         l.sync = { ...(l.sync || {}), checkedAt: now(), lastError: err.message };
       }).catch(() => {});
@@ -233,7 +234,7 @@ export function startSyncLoop() {
     try {
       await runSync();
     } catch (err) {
-      console.error('[sync]', err);
+      log.error('sync', 'Sync run failed', { err });
     } finally {
       running = false;
     }
@@ -241,5 +242,5 @@ export function startSyncLoop() {
   timer = setInterval(tick, config.syncIntervalMs);
   timer.unref?.();
   setTimeout(tick, 15_000).unref?.();
-  console.log(`[sync] cross-delist check every ${Math.round(config.syncIntervalMs / 60000)} min`);
+  log.info('sync', `Cross-delist check every ${Math.round(config.syncIntervalMs / 60000)} min`);
 }
