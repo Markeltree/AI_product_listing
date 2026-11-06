@@ -9,7 +9,7 @@ import path from 'node:path';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'velista-sec-'));
 Object.assign(process.env, {
   DATA_DIR: path.join(tmp, 'data'), UPLOAD_DIR: path.join(tmp, 'uploads'), SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '',
-  ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', SYNC_INTERVAL_MINUTES: '0', REDIS_URL: '', SESSION_SECRET: 'security-test', TRUST_PROXY: '1',
+  ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', SYNC_INTERVAL_MINUTES: '0', REDIS_URL: '', SESSION_SECRET: 'security-test', TRUST_PROXY: '1', ALLOWED_SIGNUP_EMAILS: '',
 });
 const { createApp } = await import('../src/app.js');
 const { initStore } = await import('../src/db/index.js');

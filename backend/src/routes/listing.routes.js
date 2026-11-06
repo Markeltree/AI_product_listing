@@ -6,7 +6,7 @@ import { aiLimiter, marketplaceLimiter, syncLimiter } from '../middleware/rateLi
 import { validate } from '../middleware/validate.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import {
-  delistBody, listingParams, listingUpdateBody, publishBody,
+  delistBody, listingPageQuery, listingParams, listingUpdateBody, publishBody,
 } from '../validators/schemas.js';
 
 const router = Router();
@@ -14,7 +14,7 @@ router.use(requireAuth);
 
 const params = validate({ params: listingParams });
 
-router.get('/', asyncHandler(listings.list));
+router.get('/', validate({ query: listingPageQuery }), asyncHandler(listings.list));
 // These spend AI credits, so they are limited per user.
 router.post('/', aiLimiter, assignNewListingId, uploadListingFiles, asyncHandler(listings.create));
 router.post('/bulk', aiLimiter, assignNewListingId, uploadBulkImages, asyncHandler(listings.createBulk));

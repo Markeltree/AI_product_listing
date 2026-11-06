@@ -65,5 +65,28 @@ alter table public.listings drop constraint if exists listings_status_check;
 alter table public.listings add constraint listings_status_check
   check (status in ('generating', 'draft', 'published', 'ended', 'failed'));
 
+-- Hauls: one video showing many products. Safe to run again.
+create table if not exists public.hauls (
+  id           uuid primary key,
+  user_id      uuid not null references public.users (id) on delete cascade,
+  status       text not null check (status in ('uploading', 'queued', 'failed')),
+  step         text,
+  error        text,
+  source_key   text not null,
+  source_mime  text not null,
+  source_size  bigint,
+  item_count   integer not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now()
+);
+create index if not exists hauls_user_created_idx on public.hauls (user_id, created_at desc);
+alter table public.hauls enable row level security;
+
+-- Listings: link to their haul, and a small summary so the Listings tab need not load full records.
+alter table public.listings add column if not exists haul_id uuid references public.hauls (id) on delete set null;
+alter table public.listings add column if not exists summary jsonb;
+create index if not exists listings_status_idx on public.listings (status);
+create index if not exists listings_haul_idx on public.listings (haul_id) where haul_id is not null;
+
 -- Make the API (PostgREST) see new tables right away.
 notify pgrst, 'reload schema';

@@ -90,6 +90,16 @@ export const config = {
     };
   })(),
 
+  // S3-compatible object storage for haul videos (Cloudflare R2: https://<account>.r2.cloudflarestorage.com).
+  // Without S3_BUCKET, videos are kept in UPLOAD_DIR on this server.
+  s3: {
+    endpoint: process.env.S3_ENDPOINT || '',
+    bucket: process.env.S3_BUCKET || '',
+    accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
+    region: process.env.S3_REGION || 'auto',
+  },
+
   // Encrypts Etsy and eBay tokens in the database. Keep it safe: if it is lost, sellers must reconnect.
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY || '',
   // Comma-separated emails allowed to sign up. Empty means anyone can.
@@ -123,4 +133,5 @@ export const integrations = () => ({
   ebay: Boolean(config.ebay.clientId && config.ebay.clientSecret && config.ebay.ruName),
   queue: config.redisUrl ? 'bullmq' : 'in-process',
   tokenEncryption: Boolean(config.tokenEncryptionKey),
+  storage: config.s3.bucket ? 's3' : 'local',
 });

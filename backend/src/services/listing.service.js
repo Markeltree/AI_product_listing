@@ -3,8 +3,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { LISTING_STATUS, MAX_IMAGES } from '../config/constants.js';
+import { LISTING_STATUS, MAX_IMAGES, MAX_LISTINGS_PAGE } from '../config/constants.js';
 import { store } from '../db/index.js';
+import { toListingSummary } from '../db/mappers.js';
 import { badRequest } from '../utils/errors.js';
 import { now } from '../utils/parse.js';
 import { clean } from '../utils/text.js';
@@ -46,33 +47,15 @@ function nameFromFilename(filename) {
   return clean(base.replace(/[-_]+/g, ' ').replace(/^./, (c) => c.toUpperCase()), 140) || 'Handmade item';
 }
 
-// Short form used by the dashboard list.
-function toSummary(l) {
-  const images = imagesOf(l);
-  return {
-    id: l.id,
-    status: l.status,
-    step: l.step,
-    error: l.error,
-    createdAt: l.createdAt,
-    updatedAt: l.updatedAt,
-    title: l.content?.title || l.product?.name || 'Untitled listing',
-    price: l.product?.price ?? null,
-    quantity: l.product?.quantity ?? null,
-    thumbnailId: images[0]?.id || null,
-    mediaCount: images.length,
-    etsyUrl: l.etsy?.url || null,
-    ebayUrl: l.ebay?.url || null,
-    channels: {
-      etsy: l.etsy?.listingId ? (l.etsy.state || (l.etsy.publishedAt ? 'active' : 'draft')) : null,
-      ebay: l.ebay?.offerId ? l.ebay.state || 'draft' : null,
-    },
-    endedReason: l.sync?.endedAt ? l.sync.reason : null,
-  };
-}
-
-export async function listSummaries(userId) {
-  return (await store.listListings(userId)).map(toSummary);
+// One page of the Listings tab. Rows saved before summaries existed are built from the full listing.
+export async function listSummaries(userId, { limit = MAX_LISTINGS_PAGE, offset = 0 } = {}) {
+  const rows = await store.listListingSummaries(userId, { limit: limit + 1, offset });
+  const page = await Promise.all(rows.slice(0, limit).map(async (row) => {
+    if (row.summary) return row.summary;
+    const listing = await store.getListing(userId, row.id);
+    return listing && toListingSummary(listing);
+  }));
+  return { listings: page.filter(Boolean), hasMore: rows.length > limit };
 }
 
 // Creates the listing record from uploaded files and starts generation in the background.

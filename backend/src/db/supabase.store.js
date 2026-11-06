@@ -1,8 +1,8 @@
 import { OAUTH_STATE_TTL_MS } from '../config/constants.js';
 import { HttpError } from '../utils/errors.js';
 import {
-  connectionRow, ebayConnectionRow, listingRow, oauthStateRow, toConnection, toEbayConnection, toListing, toOAuthState,
-  toUser, userRow,
+  connectionRow, ebayConnectionRow, haulRow, listingRow, oauthStateRow, toConnection, toEbayConnection, toHaul, toListing,
+  toOAuthState, toSummaryRow, toUser, userRow,
 } from './mappers.js';
 
 export class SupabaseStore {
@@ -14,9 +14,9 @@ export class SupabaseStore {
   async query(operation, request) {
     const res = await request;
     if (res.error) {
-      // PGRST205: the table is not in the database yet (schema.sql was not re-run after an update).
-      if (res.error.code === 'PGRST205' || /schema cache/i.test(res.error.message)) {
-        throw new HttpError(503, `The database is missing a table (${operation}). Run supabase/schema.sql in the Supabase SQL editor, then try again.`);
+      // PGRST205 and 42703: a table or column is not in the database yet (schema.sql was not re-run after an update).
+      if (['PGRST205', '42703'].includes(res.error.code) || /schema cache/i.test(res.error.message)) {
+        throw new HttpError(503, `The database is out of date (${operation}). Run supabase/schema.sql in the Supabase SQL editor, then try again.`);
       }
       throw new Error(`Database error (${operation}): ${res.error.message}`);
     }
@@ -45,12 +45,13 @@ export class SupabaseStore {
 
   // ---------- listings ----------
 
-  async listListings(userId) {
+  async listListingSummaries(userId, { limit, offset }) {
     const data = await this.query(
-      'listListings',
-      this.table('listings').select('data').eq('user_id', userId).order('updated_at', { ascending: false }),
+      'listListingSummaries',
+      this.table('listings').select('id, summary').eq('user_id', userId)
+        .order('updated_at', { ascending: false }).range(offset, offset + limit - 1),
     );
-    return (data || []).map(toListing);
+    return (data || []).map(toSummaryRow);
   }
   async getListing(userId, id) {
     return toListing(await this.query(
@@ -66,10 +67,27 @@ export class SupabaseStore {
     await this.query('deleteListing', this.table('listings').delete().eq('id', id).eq('user_id', userId));
   }
 
-  // Every user's listings in one status (sync: 'published'; startup recovery: 'generating').
-  async listListingsByStatus(status) {
-    const data = await this.query('listListingsByStatus', this.table('listings').select('data').eq('status', status));
+  // Listings in one status (sync: 'published'; startup recovery: 'generating'), for one user or for everyone.
+  async listListingsByStatus(status, userId = null) {
+    const request = this.table('listings').select('data').eq('status', status);
+    const data = await this.query('listListingsByStatus', userId ? request.eq('user_id', userId) : request);
     return (data || []).map(toListing);
+  }
+
+  // ---------- hauls ----------
+
+  async saveHaul(h) {
+    await this.query('saveHaul', this.table('hauls').upsert(haulRow(h)));
+  }
+  async getHaul(userId, id) {
+    return toHaul(await this.query('getHaul', this.table('hauls').select('*').eq('id', id).eq('user_id', userId).maybeSingle()));
+  }
+  async listHauls(userId) {
+    const data = await this.query('listHauls', this.table('hauls').select('*').eq('user_id', userId).order('created_at', { ascending: false }));
+    return (data || []).map(toHaul);
+  }
+  async deleteHaul(userId, id) {
+    await this.query('deleteHaul', this.table('hauls').delete().eq('id', id).eq('user_id', userId));
   }
 
   // ---------- eBay connections ----------

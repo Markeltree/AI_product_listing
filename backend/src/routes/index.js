@@ -6,6 +6,7 @@ import { connectDone } from '../controllers/connectDone.controller.js';
 import authRoutes from './auth.routes.js';
 import ebayRoutes from './ebay.routes.js';
 import etsyRoutes from './etsy.routes.js';
+import haulRoutes from './haul.routes.js';
 import listingRoutes from './listing.routes.js';
 import settingsRoutes from './settings.routes.js';
 
@@ -15,6 +16,7 @@ router.get('/health', asyncHandler(health));
 router.get('/connect/done', connectDone); // after connecting through an invite link
 router.use('/auth', authRoutes);
 router.use('/listings', listingRoutes);
+router.use('/hauls', haulRoutes);
 router.use('/etsy', etsyRoutes);
 router.use('/ebay', ebayRoutes);
 router.use('/settings', settingsRoutes);

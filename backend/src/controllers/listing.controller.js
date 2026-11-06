@@ -31,7 +31,7 @@ function assertSizes(files) {
 }
 
 export async function list(req, res) {
-  res.json({ listings: await listingService.listSummaries(req.user.id) });
+  res.json(await listingService.listSummaries(req.user.id, req.query));
 }
 
 export async function get(req, res) {

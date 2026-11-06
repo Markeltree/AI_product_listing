@@ -120,16 +120,28 @@ test/
 - **Token refresh** (`src/services/tokenRefresh.js`): a seller is only disconnected when the marketplace answers `invalid_grant`. Any other failure keeps the connection and returns a 503.
 - **Logs** use `src/utils/logger.js`: JSON lines in production, readable text locally, secrets masked. Each API response has an `X-Request-Id`, and 500 errors return it as `requestId`. Search that id in Railway logs to see everything the request did.
 
+## Hauls and file storage
+
+A haul is one video showing many products. The upload has three steps, and the API server does not handle the video when object storage is on:
+
+1. `POST /api/hauls` with `{ mime, size }` creates the haul and returns `upload: { method, url, headers }`.
+2. The app sends the file to `upload.url`.
+3. `POST /api/hauls/:id/complete` checks the file arrived and moves the haul to `queued`.
+
+With `S3_BUCKET` set, `upload.url` is a signed URL for the bucket (`src/storage/s3.js`). Without it, the URL points back to this API and the file goes to `UPLOAD_DIR` (`src/storage/local.js`), where Node's default 5 minute request limit applies. Listing photos stay in `UPLOAD_DIR` for now.
+
+After pulling a change that touches the database, run `supabase/schema.sql` in the Supabase SQL editor **before** deploying. It is safe to run again.
+
 ## Tests
 
 ```bash
-npm test                  # unit, security and reliability tests
+npm test                  # unit, security, reliability and haul tests
 npm run test:crosslist    # end-to-end Etsy + eBay flow against the mocks, in a throwaway database
 ```
 
 ## Before going live
 
 - **Signups.** Anyone who can reach the API can create an account and spend AI credits. Set `ALLOWED_SIGNUP_EMAILS` before sharing the URL publicly.
-- **Files.** Media is stored on disk (`UPLOAD_DIR`). For more than one server, move it to object storage such as S3.
+- **Files.** Haul videos can use object storage (`S3_BUCKET`). Listing photos are still on disk (`UPLOAD_DIR`), which limits the API to one server.
 - **Background work.** With `REDIS_URL`, generation and sync run on BullMQ (`src/queue/`); without it they run in-process, which is fine for local development.
 - **Costs.** Each listing makes one vision request (up to 8 images) plus one transcription when a voice note is attached. Each active Etsy listing costs the seller Etsy's listing fee.

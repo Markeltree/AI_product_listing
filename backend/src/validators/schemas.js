@@ -1,7 +1,7 @@
 // Request schemas (zod). Each one checks types and size limits at the edge, before a controller runs,
 // and strips keys it does not know. Business rules (Etsy's limits, defaults) stay in the sanitizers.
 import { z } from 'zod';
-import { DESCRIPTION_MAX, EBAY_CONDITIONS } from '../config/constants.js';
+import { DESCRIPTION_MAX, EBAY_CONDITIONS, MAX_LISTINGS_PAGE } from '../config/constants.js';
 
 const text = (max) => z.string().max(max, `Keep this under ${max} characters.`);
 const optionalId = z.union([z.number().int().positive(), z.string().max(20), z.null()]).optional();
@@ -64,6 +64,16 @@ export const delistBody = z.object({ channel: z.enum(['etsy', 'ebay', 'all']).op
 
 export const connectUrlBody = z.object({ returnTo: text(300).optional() });
 export const searchQuery = z.object({ q: text(100).optional() });
+
+export const listingPageQuery = z.object({
+  limit: z.coerce.number().int().min(1).max(MAX_LISTINGS_PAGE).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
+});
+
+export const haulCreateBody = z.object({
+  mime: z.string().trim().max(100),
+  size: z.number().int().positive(),
+});
 
 const policyId = z.string().max(64).nullable().optional();
 export const ebayPrefsBody = z.object({

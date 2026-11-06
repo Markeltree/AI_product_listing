@@ -19,7 +19,7 @@ Object.assign(process.env, {
   PORT: String(PORT), APP_URL: APP, DATA_DIR: path.join(tmp, 'data'), UPLOAD_DIR: path.join(tmp, 'uploads'),
   SUPABASE_URL: '', SUPABASE_SERVICE_ROLE_KEY: '', ANTHROPIC_API_KEY: '', OPENAI_API_KEY: '', SYNC_INTERVAL_MINUTES: '0', REDIS_URL: '',
   ETSY_REDIRECT_URI: '', MOCK_ETSY_PORT: '4011', MOCK_EBAY_PORT: '4021', MOCK_EBAY_ACCEPT_URL: `${APP}/api/ebay/callback`,
-  SESSION_SECRET: 'e2e-secret',
+  SESSION_SECRET: 'e2e-secret', ALLOWED_SIGNUP_EMAILS: '',
 });
 await import('./mock-etsy/dev.mjs');
 await new Promise((r) => setTimeout(r, 300));
