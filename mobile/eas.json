@@ -11,6 +11,7 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": { "buildType": "apk" },
       "env": { "EXPO_PUBLIC_API_URL": "https://aiproductlisting-production.up.railway.app" }
     },
     "production": {

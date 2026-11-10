@@ -1,11 +1,20 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
-import { OAUTH_STATE_TTL_MS } from '../config/constants.js';
+import fs from "node:fs";
+import path from "node:path";
+import { DatabaseSync } from "node:sqlite";
+import { OAUTH_STATE_TTL_MS } from "../config/constants.js";
 import {
-  connectionRow, ebayConnectionRow, haulRow, listingRow, oauthStateRow, toConnection, toEbayConnection, toHaul, toListing,
-  toOAuthState, toSummaryRow, toUser, userRow,
-} from './mappers.js';
+  connectionRow,
+  ebayConnectionRow,
+  listingRow,
+  oauthStateRow,
+  toConnection,
+  toEbayConnection,
+  toListing,
+  toOAuthState,
+  toSummaryRow,
+  toUser,
+  userRow,
+} from "./mappers.js";
 
 const SCHEMA = `
   PRAGMA journal_mode = WAL;
@@ -22,7 +31,6 @@ const SCHEMA = `
     user_id TEXT NOT NULL,
     status TEXT NOT NULL,
     title TEXT,
-    haul_id TEXT,
     summary TEXT,
     data TEXT NOT NULL,
     created_at TEXT NOT NULL,
@@ -30,20 +38,6 @@ const SCHEMA = `
   );
   CREATE INDEX IF NOT EXISTS listings_user_updated ON listings (user_id, updated_at);
   CREATE INDEX IF NOT EXISTS listings_status ON listings (status);
-  CREATE TABLE IF NOT EXISTS hauls (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    status TEXT NOT NULL,
-    step TEXT,
-    error TEXT,
-    source_key TEXT NOT NULL,
-    source_mime TEXT NOT NULL,
-    source_size INTEGER,
-    item_count INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-  CREATE INDEX IF NOT EXISTS hauls_user_created ON hauls (user_id, created_at);
   CREATE TABLE IF NOT EXISTS etsy_connections (
     user_id TEXT PRIMARY KEY,
     access_token TEXT NOT NULL,
@@ -65,6 +59,13 @@ const SCHEMA = `
     prefs TEXT NOT NULL DEFAULT '{}',
     updated_at TEXT NOT NULL
   );
+  CREATE TABLE IF NOT EXISTS push_tokens (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    platform TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS push_tokens_user ON push_tokens (user_id);
   CREATE TABLE IF NOT EXISTS oauth_states (
     state TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -75,7 +76,12 @@ const SCHEMA = `
 
 // SQLite has no JSON column type, so object values are stored as text.
 const serialize = (row) =>
-  Object.fromEntries(Object.entries(row).map(([k, v]) => [k, v !== null && typeof v === 'object' ? JSON.stringify(v) : v]));
+  Object.fromEntries(
+    Object.entries(row).map(([k, v]) => [
+      k,
+      v !== null && typeof v === "object" ? JSON.stringify(v) : v,
+    ]),
+  );
 
 export class SqliteStore {
   constructor(file) {
@@ -87,11 +93,9 @@ export class SqliteStore {
 
   // CREATE TABLE IF NOT EXISTS leaves an existing table alone, so older databases get new columns here.
   addMissingColumns() {
-    const columns = this.all('PRAGMA table_info(listings)').map((c) => c.name);
-    for (const name of ['haul_id', 'summary']) {
-      if (!columns.includes(name)) this.db.exec(`ALTER TABLE listings ADD COLUMN ${name} TEXT`);
-    }
-    this.db.exec('CREATE INDEX IF NOT EXISTS listings_haul ON listings (haul_id)');
+    const columns = this.all("PRAGMA table_info(listings)").map((c) => c.name);
+    if (!columns.includes("summary"))
+      this.db.exec("ALTER TABLE listings ADD COLUMN summary TEXT");
   }
 
   get(sql, ...params) {
@@ -115,76 +119,69 @@ export class SqliteStore {
     return u;
   }
   async findUserByEmail(email) {
-    return toUser(this.get('SELECT * FROM users WHERE email = ?', email));
+    return toUser(this.get("SELECT * FROM users WHERE email = ?", email));
   }
   async findUserById(id) {
-    return toUser(this.get('SELECT * FROM users WHERE id = ?', id));
+    return toUser(this.get("SELECT * FROM users WHERE id = ?", id));
   }
   async updateUserSettings(id, settings) {
-    this.run('UPDATE users SET settings = ? WHERE id = ?', JSON.stringify(settings), id);
+    this.run(
+      "UPDATE users SET settings = ? WHERE id = ?",
+      JSON.stringify(settings),
+      id,
+    );
   }
 
   // ---------- listings ----------
 
   async listListingSummaries(userId, { limit, offset }) {
-    return this.all('SELECT id, summary FROM listings WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?', userId, limit, offset)
-      .map(toSummaryRow);
+    return this.all(
+      "SELECT id, summary FROM listings WHERE user_id = ? ORDER BY updated_at DESC LIMIT ? OFFSET ?",
+      userId,
+      limit,
+      offset,
+    ).map(toSummaryRow);
   }
   async getListing(userId, id) {
-    return toListing(this.get('SELECT data FROM listings WHERE id = ? AND user_id = ?', id, userId));
+    return toListing(
+      this.get(
+        "SELECT data FROM listings WHERE id = ? AND user_id = ?",
+        id,
+        userId,
+      ),
+    );
   }
   async saveListing(l) {
     this.run(
-      `INSERT INTO listings (id, user_id, status, title, haul_id, summary, data, created_at, updated_at)
-       VALUES (:id, :user_id, :status, :title, :haul_id, :summary, :data, :created_at, :updated_at)
-       ON CONFLICT(id) DO UPDATE SET status = excluded.status, title = excluded.title, haul_id = excluded.haul_id,
+      `INSERT INTO listings (id, user_id, status, title, summary, data, created_at, updated_at)
+       VALUES (:id, :user_id, :status, :title, :summary, :data, :created_at, :updated_at)
+       ON CONFLICT(id) DO UPDATE SET status = excluded.status, title = excluded.title,
          summary = excluded.summary, data = excluded.data, updated_at = excluded.updated_at`,
       serialize(listingRow(l)),
     );
     return l;
   }
   async deleteListing(userId, id) {
-    this.run('DELETE FROM listings WHERE id = ? AND user_id = ?', id, userId);
+    this.run("DELETE FROM listings WHERE id = ? AND user_id = ?", id, userId);
   }
   // Listings in one status (sync: 'published'; startup recovery: 'generating'), for one user or for everyone.
   async listListingsByStatus(status, userId = null) {
     const rows = userId
-      ? this.all('SELECT data FROM listings WHERE status = ? AND user_id = ?', status, userId)
-      : this.all('SELECT data FROM listings WHERE status = ?', status);
+      ? this.all(
+          "SELECT data FROM listings WHERE status = ? AND user_id = ?",
+          status,
+          userId,
+        )
+      : this.all("SELECT data FROM listings WHERE status = ?", status);
     return rows.map(toListing);
-  }
-
-  // ---------- hauls ----------
-
-  async saveHaul(h) {
-    this.run(
-      `INSERT INTO hauls (id, user_id, status, step, error, source_key, source_mime, source_size, item_count, created_at, updated_at)
-       VALUES (:id, :user_id, :status, :step, :error, :source_key, :source_mime, :source_size, :item_count, :created_at, :updated_at)
-       ON CONFLICT(id) DO UPDATE SET status = excluded.status, step = excluded.step, error = excluded.error,
-         source_size = excluded.source_size, item_count = excluded.item_count, updated_at = excluded.updated_at`,
-      serialize(haulRow(h)),
-    );
-  }
-  async getHaul(userId, id) {
-    return toHaul(this.get('SELECT * FROM hauls WHERE id = ? AND user_id = ?', id, userId));
-  }
-  async listHauls(userId) {
-    return this.all('SELECT * FROM hauls WHERE user_id = ? ORDER BY created_at DESC', userId).map(toHaul);
-  }
-  async deleteHaul(userId, id) {
-    this.run('DELETE FROM hauls WHERE id = ? AND user_id = ?', id, userId);
-  }
-  async listHaulsByStatus(status) {
-    return this.all('SELECT * FROM hauls WHERE status = ?', status).map(toHaul);
-  }
-  async listListingSummariesByHaul(userId, haulId) {
-    return this.all('SELECT id, summary FROM listings WHERE user_id = ? AND haul_id = ? ORDER BY created_at', userId, haulId).map(toSummaryRow);
   }
 
   // ---------- Etsy connections ----------
 
   async getConnection(userId) {
-    return toConnection(this.get('SELECT * FROM etsy_connections WHERE user_id = ?', userId));
+    return toConnection(
+      this.get("SELECT * FROM etsy_connections WHERE user_id = ?", userId),
+    );
   }
   async saveConnection(c) {
     this.run(
@@ -197,13 +194,15 @@ export class SqliteStore {
     );
   }
   async deleteConnection(userId) {
-    this.run('DELETE FROM etsy_connections WHERE user_id = ?', userId);
+    this.run("DELETE FROM etsy_connections WHERE user_id = ?", userId);
   }
 
   // ---------- eBay connections ----------
 
   async getEbayConnection(userId) {
-    return toEbayConnection(this.get('SELECT * FROM ebay_connections WHERE user_id = ?', userId));
+    return toEbayConnection(
+      this.get("SELECT * FROM ebay_connections WHERE user_id = ?", userId),
+    );
   }
   async saveEbayConnection(c) {
     this.run(
@@ -216,21 +215,44 @@ export class SqliteStore {
     );
   }
   async deleteEbayConnection(userId) {
-    this.run('DELETE FROM ebay_connections WHERE user_id = ?', userId);
+    this.run("DELETE FROM ebay_connections WHERE user_id = ?", userId);
+  }
+
+  // ---------- push tokens ----------
+
+  async savePushToken({ token, userId, platform }) {
+    this.run(
+      `INSERT INTO push_tokens (token, user_id, platform, updated_at) VALUES (?, ?, ?, ?)
+       ON CONFLICT(token) DO UPDATE SET user_id = excluded.user_id, platform = excluded.platform, updated_at = excluded.updated_at`,
+      token, userId, platform, new Date().toISOString(),
+    );
+  }
+  async listPushTokens(userId) {
+    return this.all('SELECT token FROM push_tokens WHERE user_id = ?', userId).map((r) => r.token);
+  }
+  // With a userId, only that seller's phone is removed.
+  async deletePushToken(token, userId = null) {
+    if (userId) this.run('DELETE FROM push_tokens WHERE token = ? AND user_id = ?', token, userId);
+    else this.run('DELETE FROM push_tokens WHERE token = ?', token);
   }
 
   // ---------- OAuth state (PKCE verifier between redirect and callback) ----------
 
   async saveOAuthState(s) {
-    this.run('DELETE FROM oauth_states WHERE created_at < ?', new Date(Date.now() - OAUTH_STATE_TTL_MS).toISOString());
     this.run(
-      'INSERT INTO oauth_states (state, user_id, verifier, created_at) VALUES (:state, :user_id, :verifier, :created_at)',
+      "DELETE FROM oauth_states WHERE created_at < ?",
+      new Date(Date.now() - OAUTH_STATE_TTL_MS).toISOString(),
+    );
+    this.run(
+      "INSERT INTO oauth_states (state, user_id, verifier, created_at) VALUES (:state, :user_id, :verifier, :created_at)",
       oauthStateRow(s),
     );
   }
   async takeOAuthState(state) {
-    const row = toOAuthState(this.get('SELECT * FROM oauth_states WHERE state = ?', state));
-    if (row) this.run('DELETE FROM oauth_states WHERE state = ?', state);
+    const row = toOAuthState(
+      this.get("SELECT * FROM oauth_states WHERE state = ?", state),
+    );
+    if (row) this.run("DELETE FROM oauth_states WHERE state = ?", state);
     return row;
   }
 }

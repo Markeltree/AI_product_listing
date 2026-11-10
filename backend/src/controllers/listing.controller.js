@@ -47,7 +47,18 @@ export async function create(req, res) {
     if (!String(input.name || '').trim() || !String(input.type || '').trim()) throw badRequest('Add a product name and type to continue.');
     return input;
   });
-  const listing = await listingService.createListing({ user: req.user, product, files });
+  const listing = await listingService.createListing({ id: req.listingId, user: req.user, product, files });
+  res.status(202).json({ listing });
+}
+
+// One video of a product, and nothing else: the AI reads the details and photos are taken from the video.
+export async function scan(req, res) {
+  const files = req.files || {};
+  withUploadCleanup(files, () => {
+    assertSizes(files);
+    if (!files.video?.length) throw badRequest('Add a video of your product.');
+  });
+  const listing = await listingService.createListing({ id: req.listingId, user: req.user, product: {}, files });
   res.status(202).json({ listing });
 }
 

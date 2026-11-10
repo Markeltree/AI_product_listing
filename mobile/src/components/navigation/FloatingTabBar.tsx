@@ -11,7 +11,7 @@ type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tab
 type IconName = keyof typeof Ionicons.glyphMap;
 
 // Ionicons base name per route; the active tab uses the filled icon, the others the outline one.
-const ICONS: Record<string, string> = { index: 'grid', haul: 'videocam', new: 'add-circle', bulk: 'layers', settings: 'settings' };
+const ICONS: Record<string, string> = { index: 'grid', scan: 'scan', new: 'add-circle', bulk: 'layers', settings: 'settings' };
 
 export function FloatingTabBar({ state, descriptors, emitter, navigateToTab }: TabBarProps) {
   const insets = useSafeAreaInsets();

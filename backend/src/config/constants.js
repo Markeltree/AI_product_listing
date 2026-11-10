@@ -72,13 +72,9 @@ export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 export const MAX_VOICE_BYTES = 25 * 1024 * 1024;
 export const MAX_BULK_IMAGES = 20;
 
-export const MAX_HAUL_VIDEO_BYTES = 500 * 1024 * 1024;
-export const HAUL_UPLOAD_TTL_MS = 60 * 60 * 1000;
-export const HAUL_STATUS = { UPLOADING: 'uploading', QUEUED: 'queued', PROCESSING: 'processing', REVIEW: 'review', FAILED: 'failed' };
-export const HAUL_SAMPLE_FRAMES = 16;
-export const MAX_HAUL_ITEMS = 20;
-export const HAUL_PHOTOS_PER_ITEM = 2;
 export const MAX_LISTINGS_PAGE = 200;
+// Photos taken from a video when a product is scanned.
+export const SCAN_PHOTOS = 4;
 
 export const OAUTH_STATE_TTL_MS = 15 * 60 * 1000;
 export const ETSY_CONNECT_TICKET_TTL_MS = 5 * 60 * 1000;

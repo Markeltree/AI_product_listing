@@ -70,11 +70,6 @@ export const listingPageQuery = z.object({
   offset: z.coerce.number().int().min(0).optional(),
 });
 
-export const haulCreateBody = z.object({
-  mime: z.string().trim().max(100),
-  size: z.number().int().positive(),
-});
-
 const policyId = z.string().max(64).nullable().optional();
 export const ebayPrefsBody = z.object({
   fulfillmentPolicyId: policyId,
@@ -86,4 +81,9 @@ export const ebayPrefsBody = z.object({
     postalCode: z.string().trim().min(2, 'Enter a postal code.').max(20),
     country: z.string().trim().length(2, 'Use a 2-letter country code, such as US.'),
   }).optional(),
+});
+
+export const pushTokenBody = z.object({
+  token: z.string().max(200).regex(/^Expo(nent)?PushToken\[[^\]]+\]$/, 'This is not a valid device token.'),
+  platform: z.enum(['ios', 'android']),
 });

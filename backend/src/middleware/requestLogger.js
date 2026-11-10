@@ -1,8 +1,5 @@
-import { randomUUID } from 'node:crypto';
-import { log, runWithRequestId } from '../utils/logger.js';
-
-// Gives each API request an id, returned as X-Request-Id, and writes one log line when it finishes.
-// Every log written while handling the request carries the same id, so one search finds them all.
+import { randomUUID } from "node:crypto";
+import { log, runWithRequestId } from "../utils/logger.js";
 export function requestLogger(req, res, next) {
   const requestId = randomUUID();
   const started = Date.now();
@@ -12,13 +9,19 @@ export function requestLogger(req, res, next) {
     if (res.statusCode >= 400 && body?.error) errorMessage = body.error;
     return json(body);
   };
-  res.setHeader('X-Request-Id', requestId);
-  res.on('finish', () => runWithRequestId(requestId, () => {
-    const details = { status: res.statusCode, ms: Date.now() - started, error: errorMessage };
-    const line = `${req.method} ${req.originalUrl.split('?')[0]}`;
-    if (res.statusCode >= 500) log.error('api', line, details);
-    else if (res.statusCode >= 400) log.warn('api', line, details);
-    else log.info('api', line, { status: details.status, ms: details.ms });
-  }));
+  res.setHeader("X-Request-Id", requestId);
+  res.on("finish", () =>
+    runWithRequestId(requestId, () => {
+      const details = {
+        status: res.statusCode,
+        ms: Date.now() - started,
+        error: errorMessage,
+      };
+      const line = `${req.method} ${req.originalUrl.split("?")[0]}`;
+      if (res.statusCode >= 500) log.error("api", line, details);
+      else if (res.statusCode >= 400) log.warn("api", line, details);
+      else log.info("api", line, { status: details.status, ms: details.ms });
+    }),
+  );
   runWithRequestId(requestId, next);
 }

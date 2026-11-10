@@ -1,5 +1,6 @@
 // Multi-marketplace actions: publish to eBay, end a listing on one or all marketplaces, and the
 // cross-delist sync that ends the copy on the other marketplace when an item sells or ends on one.
+import { notifyUser } from './notifications.service.js';
 import { config } from '../config/index.js';
 import { LISTING_STATUS } from '../config/constants.js';
 import { store } from '../db/index.js';
@@ -207,6 +208,7 @@ export async function runSync({ userId = null } = {}) {
       const action = await syncListing(listing);
       if (action) {
         log.info('sync', action, { listingId: listing.id });
+        await notifyUser(listing.userId, { title: listing.content?.title || 'Listing update', body: action, data: { listingId: listing.id } });
         results.push({ id: listing.id, title: listing.content?.title, action });
       }
     } catch (err) {

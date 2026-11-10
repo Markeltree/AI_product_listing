@@ -7,27 +7,38 @@
 // The shop is connected to the Velista account with that email, so whoever signs in to that account
 // in the app can publish to the shop. Send the link privately: anyone who opens it before it expires
 // can connect an Etsy shop to that account.
-import { config } from '../config/index.js';
-import { initStore, store } from '../db/index.js';
-import { etsyConfigured } from '../services/etsy/index.js';
-import { createInviteUrl } from '../services/etsyConnection.service.js';
+import { config } from "../config/index.js";
+import { initStore, store } from "../db/index.js";
+import { etsyConfigured } from "../services/etsy/index.js";
+import { createInviteUrl } from "../services/etsyConnection.service.js";
 
 const [email, hoursArg] = process.argv.slice(2);
 const hours = Math.min(168, Math.max(1, Number(hoursArg) || 48));
-const fail = (msg) => { console.error(`\n✖ ${msg}\n`); process.exit(1); };
+const fail = (msg) => {
+  console.error(`\n✖ ${msg}\n`);
+  process.exit(1);
+};
 
-if (!email) fail('Pass the email of the Velista account the shop should connect to: npm run etsy:invite -- you@example.com');
-if (!etsyConfigured()) fail('ETSY_API_KEY is empty in .env.');
+if (!email)
+  fail(
+    "Pass the email of the Velista account the shop should connect to: npm run etsy:invite -- you@example.com",
+  );
+if (!etsyConfigured()) fail("ETSY_API_KEY is empty in .env.");
 
 const app = new URL(config.appUrl);
-if (app.protocol !== 'https:' || /^(localhost|127\.)/.test(app.hostname)) {
-  fail(`APP_URL is ${config.appUrl}. The shop owner's browser must reach this server, so APP_URL has to be a public HTTPS address `
-    + '(an ngrok tunnel or your deployed URL). Set it in .env, add APP_URL + /api/etsy/callback to your Etsy app, restart the server, then run this again.');
+if (app.protocol !== "https:" || /^(localhost|127\.)/.test(app.hostname)) {
+  fail(
+    `APP_URL is ${config.appUrl}. The shop owner's browser must reach this server, so APP_URL has to be a public HTTPS address ` +
+      "(an ngrok tunnel or your deployed URL). Set it in .env, add APP_URL + /api/etsy/callback to your Etsy app, restart the server, then run this again.",
+  );
 }
 
 await initStore();
 const user = await store.findUserByEmail(String(email).trim().toLowerCase());
-if (!user) fail(`No Velista account uses ${email}. Sign up in the app first, then run this again.`);
+if (!user)
+  fail(
+    `No Velista account uses ${email}. Sign up in the app first, then run this again.`,
+  );
 
 const url = createInviteUrl(user.id, hours);
 console.log(`

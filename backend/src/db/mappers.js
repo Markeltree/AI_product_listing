@@ -45,21 +45,6 @@ export function toListingSummary(l) {
 
 export const toSummaryRow = (r) => ({ id: r.id, summary: parseJson(r.summary, null) });
 
-export const toHaul = (r) =>
-  r && {
-    id: r.id,
-    userId: r.user_id,
-    status: r.status,
-    step: r.step ?? null,
-    error: r.error ?? null,
-    sourceKey: r.source_key,
-    sourceMime: r.source_mime,
-    sourceSize: r.source_size == null ? null : Number(r.source_size),
-    itemCount: Number(r.item_count ?? 0),
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
-  };
-
 export const toConnection = (r) =>
   r && {
     userId: r.user_id,
@@ -105,25 +90,10 @@ export const listingRow = (l) => ({
   user_id: l.userId,
   status: l.status,
   title: l.content?.title || l.product?.name || '',
-  haul_id: l.haulId ?? null,
   summary: toListingSummary(l),
   data: l,
   created_at: l.createdAt,
   updated_at: l.updatedAt,
-});
-
-export const haulRow = (h) => ({
-  id: h.id,
-  user_id: h.userId,
-  status: h.status,
-  step: h.step ?? null,
-  error: h.error ?? null,
-  source_key: h.sourceKey,
-  source_mime: h.sourceMime,
-  source_size: h.sourceSize ?? null,
-  item_count: h.itemCount ?? 0,
-  created_at: h.createdAt,
-  updated_at: h.updatedAt,
 });
 
 export const connectionRow = (c) => ({

@@ -4,12 +4,18 @@ export function cors(allowedOrigins) {
   return (req, res, next) => {
     const origin = req.headers.origin;
     if (origin && allowedOrigins.includes(origin)) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
-      res.setHeader('Access-Control-Allow-Headers', 'Authorization, Content-Type');
-      res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
-      res.setHeader('Vary', 'Origin');
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Authorization, Content-Type",
+      );
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+      );
+      res.setHeader("Vary", "Origin");
     }
-    if (req.method === 'OPTIONS') return res.status(204).end();
+    if (req.method === "OPTIONS") return res.status(204).end();
     next();
   };
 }

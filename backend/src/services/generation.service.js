@@ -1,12 +1,15 @@
-// Background listing generation: video frames -> voice transcript -> AI copy.
+// Background listing generation: photos from a scan -> video frames -> voice transcript -> AI copy.
 // Runs inside the server process; progress is written to listing.step so clients can poll it.
+import { notifyUser } from './notifications.service.js';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import { config } from '../config/index.js';
 import { store } from '../db/index.js';
-import { LISTING_STATUS } from '../config/constants.js';
-import { extractVideoFrames, generateContent, transcribeAudio } from './ai/index.js';
-import { hydrate, listingDir } from './media.service.js';
+import { LISTING_STATUS, SCAN_PHOTOS } from '../config/constants.js';
+import { analyzeProduct, extractVideoFrames, generateContent, transcribeAudio } from './ai/index.js';
+import { absPath, hydrate, imagesOf, listingDir, removeFile, toMediaRecord } from './media.service.js';
 import { findListing, updateListing } from './listing.repository.js';
+import { sanitizeProduct } from '../validators/listing.sanitizer.js';
 import { getUserSettings } from './settings.service.js';
 import { log } from '../utils/logger.js';
 
@@ -53,6 +56,38 @@ async function readTranscript(voice, warnings) {
   }
 }
 
+// A listing with a video but no photos gets its photos from the video. The photos replace the video,
+// so a retry does not repeat this and large files do not stay on disk.
+async function takePhotosFromVideo(userId, listing) {
+  const video = listing.media.find((m) => m.kind === 'video');
+  if (!video || imagesOf(listing).length) return listing;
+  const paths = await extractVideoFrames(absPath(video), listingDir(userId, listing.id), SCAN_PHOTOS, { fullSize: true }).catch((err) => {
+    log.warn('generation', 'Could not take photos from a video', { listingId: listing.id, err });
+    return [];
+  });
+  if (!paths.length) throw new Error('No photos could be read from the video.');
+  const photos = await Promise.all(paths.map(async (filePath) => toMediaRecord(
+    { originalname: path.basename(filePath), mimetype: 'image/jpeg', size: (await fs.stat(filePath)).size },
+    { kind: 'image', filePath },
+  )));
+  const updated = await updateListing(userId, listing.id, (l) => {
+    l.media = [...photos, ...l.media.filter((m) => m.id !== video.id)];
+  });
+  await removeFile(video);
+  return updated;
+}
+
+// A scan has no details from the seller, so they are read from the photos first.
+async function readProductDetails(userId, listing, settings) {
+  if (listing.product?.name) return listing;
+  const photos = hydrate(listing).media.filter((m) => m.kind === 'image').map((m) => m.absolutePath);
+  const found = await analyzeProduct(photos, { language: listing.product?.language });
+  if (!found) return listing;
+  return updateListing(userId, listing.id, (l) => {
+    l.product = sanitizeProduct({ ...l.product, ...found, keywords: found.keywords }, settings);
+  });
+}
+
 // finalAttempt: false when a queue will retry this job on failure. The listing then stays on
 // "generating" and the error is re-thrown so BullMQ schedules the retry.
 export async function runGeneration(userId, listingId, { finalAttempt = true } = {}) {
@@ -60,8 +95,12 @@ export async function runGeneration(userId, listingId, { finalAttempt = true } =
 
   try {
     const settings = await getUserSettings(userId);
-    const listing = await findListing(userId, listingId);
+    let listing = await findListing(userId, listingId);
     if (!listing) return;
+    if (listing.media.some((m) => m.kind === 'video') && !imagesOf(listing).length) await progress('Taking photos from your video');
+    listing = await takePhotosFromVideo(userId, listing);
+    if (!listing.product?.name) await progress('Looking at your product');
+    listing = await readProductDetails(userId, listing, settings);
     const hydrated = hydrate(listing);
     const video = hydrated.media.find((m) => m.kind === 'video');
     const voice = hydrated.media.find((m) => m.kind === 'voice');
@@ -82,7 +121,10 @@ export async function runGeneration(userId, listingId, { finalAttempt = true } =
       writer: result.analysis.source === 'ai' ? result.analysis.provider : 'template',
       warnings: allWarnings.length ? allWarnings : undefined,
     });
-    await updateListing(userId, listingId, (l) => {
+    let notify = false;
+    const written = await updateListing(userId, listingId, (l) => {
+      notify = Boolean(l.notifyWhenReady);
+      l.notifyWhenReady = false;
       l.content = result.content;
       l.analysis = {
         ...result.analysis,
@@ -94,16 +136,21 @@ export async function runGeneration(userId, listingId, { finalAttempt = true } =
       l.step = null;
       l.error = null;
     });
+    if (notify && written) await notifyUser(userId, { title: 'Your listing is ready', body: written.content.title, data: { listingId } });
   } catch (err) {
     log.error('generation', finalAttempt ? 'Generation failed' : 'Generation failed, will retry', { listingId, err });
     if (!finalAttempt) {
       await updateListing(userId, listingId, (l) => { l.step = 'Had a problem, trying again shortly'; }).catch(() => {});
       throw err;
     }
+    let notify = false;
     await updateListing(userId, listingId, (l) => {
+      notify = Boolean(l.notifyWhenReady);
+      l.notifyWhenReady = false;
       l.status = LISTING_STATUS.FAILED;
       l.step = null;
       l.error = `Generation failed: ${err.message}`;
     });
+    if (notify) await notifyUser(userId, { title: 'We could not create your listing', body: 'Open the app to try again.', data: { listingId } });
   }
 }

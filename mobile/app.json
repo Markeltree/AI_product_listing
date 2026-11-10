@@ -7,7 +7,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.velista.listingai",
@@ -19,6 +18,7 @@
     },
     "android": {
       "package": "com.velista.listingai",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#F6F4F0",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -46,7 +46,10 @@
           "microphonePermission": "Velista records sound with product videos."
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-notifications",
+      "expo-font",
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": false

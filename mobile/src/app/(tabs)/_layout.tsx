@@ -6,7 +6,7 @@ export default function TabsLayout() {
   return (
     <Tabs screenOptions={{ headerShown: false }} tabBar={(props) => <FloatingTabBar {...props} />}>
       <Tabs.Screen name="index" options={{ title: 'Listings' }} />
-      <Tabs.Screen name="haul" options={{ title: 'Haul' }} />
+      <Tabs.Screen name="scan" options={{ title: 'Scan' }} />
       <Tabs.Screen name="new" options={{ title: 'New' }} />
       <Tabs.Screen name="bulk" options={{ title: 'Bulk' }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings' }} />

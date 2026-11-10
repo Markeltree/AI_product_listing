@@ -1,5 +1,3 @@
-// Multipart uploads (multer). Files are written to uploads/<userId>/<req.listingId>/,
-// so a middleware that sets req.listingId must run before any of these.
 import fs from 'node:fs';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
@@ -14,13 +12,10 @@ const VIDEO_EXT = new Set(Object.values(VIDEO_MIME));
 const MAX_BYTES = { images: MAX_IMAGE_BYTES, video: MAX_VIDEO_BYTES, voice: MAX_VOICE_BYTES };
 
 const extOf = (file) => path.extname(file.originalname).toLowerCase();
-
-// Browsers and phones sometimes send a generic or empty MIME type, so the extension is the fallback.
 const isImage = (file) => Boolean(IMAGE_MIME[file.mimetype]) || IMAGE_EXT.has(extOf(file));
 const isVideo = (file) => Boolean(VIDEO_MIME[file.mimetype]) || VIDEO_EXT.has(extOf(file));
 const isAudio = (file) => file.mimetype.startsWith('audio/') || file.mimetype === 'video/webm' || AUDIO_EXT.includes(extOf(file));
 
-// The form field decides what the file is allowed to be (.webm is valid for both video and voice).
 const FIELD_RULES = {
   images: { accepts: isImage, error: 'Photos must be JPG, PNG, WEBP or GIF.' },
   video: { accepts: isVideo, error: 'The product video must be MP4, MOV, WEBM or MKV.' },
@@ -44,8 +39,6 @@ const upload = multer({
       cb(null, `${randomUUID()}${extensionFor(file)}`);
     },
   }),
-  // Per-field size limits are checked afterwards by checkSizes(); this is the hard ceiling.
-  // fieldSize caps the text fields (the product JSON) so a form cannot carry megabytes of text.
   limits: { fileSize: MAX_VIDEO_BYTES, files: Math.max(MAX_IMAGES + 2, MAX_BULK_IMAGES), fieldSize: 64 * 1024, fields: 10 },
   fileFilter(_req, file, cb) {
     const rule = FIELD_RULES[file.fieldname];

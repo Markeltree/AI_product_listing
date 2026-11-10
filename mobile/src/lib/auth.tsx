@@ -1,5 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { api, setUnauthorizedHandler } from './api';
+import { unregisterFromPush } from './notifications';
 import { clearToken, loadToken, saveToken } from './session';
 import type { User } from './types';
 
@@ -75,7 +76,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       await finishSignIn(res);
     },
-    signOut,
+    signOut: async () => {
+      await unregisterFromPush();
+      await signOut();
+    },
     updateUser: (patch) => setUser((u) => (u ? { ...u, ...patch } : u)),
   }), [status, user, token, finishSignIn, signOut]);
 

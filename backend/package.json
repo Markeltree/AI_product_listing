@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test test/unit.test.js test/security.test.js test/reliability.test.js test/hauls.test.js",
+    "test": "node --test test/unit.test.js test/security.test.js test/reliability.test.js test/listings.test.js test/notifications.test.js",
     "etsy:invite": "node src/scripts/etsy-invite.js",
     "test:crosslist": "node test/crosslist-e2e.mjs",
     "mock:etsy": "node test/mock-etsy/server.mjs",
@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.4",
-    "aws4fetch": "^1.0.20",
     "bullmq": "^6.5.4",
     "dotenv": "^16.4.5",
     "express": "^4.21.2",

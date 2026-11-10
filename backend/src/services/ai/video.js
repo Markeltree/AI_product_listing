@@ -43,32 +43,9 @@ async function grabFrame(videoPath, seconds, out, { width = 960, quality = 4 } =
   return Boolean(stat?.size);
 }
 
-// A listing photo: the frame at full video size.
-export const grabFullFrame = (videoPath, seconds, out) => grabFrame(videoPath, seconds, out, { width: 0, quality: 2 });
-
-// Frames spread across a haul video, small enough to send many to the AI. Returns [{ path, seconds }].
-export async function sampleVideoFrames(videoPath, outDir, count) {
-  await fs.mkdir(outDir, { recursive: true });
-  const duration = await videoDuration(videoPath);
-  const times = duration ? Array.from({ length: count }, (_, i) => (duration * (i + 0.5)) / count) : [0];
-  const frames = [];
-  for (const [i, seconds] of times.entries()) {
-    const out = path.join(outDir, `sample-${i + 1}.jpg`);
-    if (await grabFrame(videoPath, seconds, out, { width: 720, quality: 5 }).catch(() => false)) frames.push({ path: out, seconds });
-  }
-  return frames;
-}
-
-// The video's sound as a small MP3 for transcription. Returns null if the video has no sound.
-export async function extractAudio(videoPath, out) {
-  await exec(config.ffmpeg, ['-y', '-loglevel', 'error', '-i', videoPath, '-vn', '-ac', '1', '-b:a', '48k', out], EXEC_OPTS);
-  const stat = await fs.stat(out).catch(() => null);
-  return stat?.size ? out : null;
-}
-
 // Returns the paths of the written JPG frames. Throws if ffmpeg is missing; returns [] if the
-// video has no readable frames.
-export async function extractVideoFrames(videoPath, outDir, count = MAX_FRAMES) {
+// video has no readable frames. fullSize keeps the video's resolution, for frames used as listing photos.
+export async function extractVideoFrames(videoPath, outDir, count = MAX_FRAMES, { fullSize = false } = {}) {
   await fs.mkdir(outDir, { recursive: true });
   const duration = await videoDuration(videoPath);
   // Unknown length: still try the first frame, which is better than nothing.
@@ -78,7 +55,7 @@ export async function extractVideoFrames(videoPath, outDir, count = MAX_FRAMES) 
   const frames = [];
   for (const [i, seconds] of times.entries()) {
     const out = path.join(outDir, `frame-${i + 1}.jpg`);
-    if (await grabFrame(videoPath, seconds, out)) frames.push(out);
+    if (await grabFrame(videoPath, seconds, out, fullSize ? { width: 0, quality: 2 } : undefined)) frames.push(out);
   }
   return frames;
 }

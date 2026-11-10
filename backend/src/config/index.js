@@ -25,8 +25,6 @@ export const config = {
   sessionSecret: process.env.SESSION_SECRET || crypto.randomBytes(32).toString('hex'),
   sessionMaxAgeMs: 1000 * 60 * 60 * 24 * 14,
 
-  // Proxies in front of the server whose X-Forwarded-For can be trusted for the client IP (rate limits).
-  // Railway has one. Set TRUST_PROXY=0 when the server is reached directly.
   trustProxy: Number(process.env.TRUST_PROXY ?? 1),
 
   // Origins allowed to call the API from a browser (for example the Expo web preview). Native apps do not need it.
@@ -90,15 +88,7 @@ export const config = {
     };
   })(),
 
-  // S3-compatible object storage for haul videos (Cloudflare R2: https://<account>.r2.cloudflarestorage.com).
-  // Without S3_BUCKET, videos are kept in UPLOAD_DIR on this server.
-  s3: {
-    endpoint: process.env.S3_ENDPOINT || '',
-    bucket: process.env.S3_BUCKET || '',
-    accessKeyId: process.env.S3_ACCESS_KEY_ID || '',
-    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
-    region: process.env.S3_REGION || 'auto',
-  },
+  expoPushUrl: process.env.EXPO_PUSH_URL || 'https://exp.host/--/api/v2/push/send',
 
   // Encrypts Etsy and eBay tokens in the database. Keep it safe: if it is lost, sellers must reconnect.
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY || '',
@@ -133,5 +123,4 @@ export const integrations = () => ({
   ebay: Boolean(config.ebay.clientId && config.ebay.clientSecret && config.ebay.ruName),
   queue: config.redisUrl ? 'bullmq' : 'in-process',
   tokenEncryption: Boolean(config.tokenEncryptionKey),
-  storage: config.s3.bucket ? 's3' : 'local',
 });
