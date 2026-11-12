@@ -12,6 +12,7 @@ import {
   Banner, Button, Card, CardHeader, Field, Heading, KeyValueRow, Screen, Segmented, Select, SwitchRow,
 } from '@/components/ui';
 import { EbayCard } from '@/components/marketplaces/EbayCard';
+import { NotificationsCard } from '@/components/settings/NotificationsCard';
 import { EtsyCard } from '@/components/marketplaces/EtsyCard';
 import { font, space } from '@/theme';
 
@@ -189,6 +190,8 @@ export default function SettingsScreen() {
       </Card>
 
       <View style={{ height: space.md }} />
+      <NotificationsCard />
+
       <Card>
         <CardHeader icon="sparkles-outline" title="AI and services" />
         <KeyValueRow label="Listing AI" value={ai ? (ai.provider === 'template' ? 'Template only (no AI key on the server)' : `${ai.provider}${ai.model ? ` · ${ai.model}` : ''}`) : 'Checking…'} selectable />

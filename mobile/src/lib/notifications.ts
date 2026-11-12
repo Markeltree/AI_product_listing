@@ -5,12 +5,22 @@ import { api } from './api';
 // Expo Go and the web preview cannot receive push notifications, so the module is only loaded elsewhere.
 export const pushSupported = Platform.OS !== 'web' && Constants.executionEnvironment !== ExecutionEnvironment.StoreClient;
 
-let registeredToken: string | null = null;
+export type PushStatus =
+  | { state: 'unsupported'; message: string }
+  | { state: 'denied'; message: string }
+  | { state: 'registered'; message: string }
+  | { state: 'error'; message: string };
 
-// Asks permission and tells the server where to reach this phone. The app works normally without it,
-// for example when the seller says no, so problems are only logged.
-export async function registerForPush(): Promise<void> {
-  if (!pushSupported) return;
+let registeredToken: string | null = null;
+let lastStatus: PushStatus | null = null;
+
+export const getPushStatus = () => lastStatus;
+
+export async function registerForPush(): Promise<PushStatus> {
+  if (!pushSupported) {
+    lastStatus = { state: 'unsupported', message: 'Notifications need the installed Velista app. They do not work in Expo Go or the web preview.' };
+    return lastStatus;
+  }
   try {
     const Notifications = await import('expo-notifications');
     Notifications.setNotificationHandler({
@@ -26,15 +36,20 @@ export async function registerForPush(): Promise<void> {
     }
     let { granted } = await Notifications.getPermissionsAsync();
     if (!granted) ({ granted } = await Notifications.requestPermissionsAsync());
-    if (!granted) return;
+    if (!granted) {
+      lastStatus = { state: 'denied', message: 'Notifications are turned off for Velista. Turn them on in your phone settings, then tap Turn on again.' };
+      return lastStatus;
+    }
 
     const projectId = Constants.expoConfig?.extra?.eas?.projectId;
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
     await api('/api/notifications/token', { method: 'POST', body: { token, platform: Platform.OS } });
     registeredToken = token;
+    lastStatus = { state: 'registered', message: 'This phone gets alerts when a listing is ready or an item sells.' };
   } catch (e) {
-    console.warn('Push notifications are not available:', (e as Error).message);
+    lastStatus = { state: 'error', message: `This phone could not be set up for notifications: ${(e as Error).message}` };
   }
+  return lastStatus;
 }
 
 // Called before signing out, so the next person on this phone does not get this seller's alerts.

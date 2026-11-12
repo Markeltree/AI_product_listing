@@ -1,7 +1,5 @@
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 
-// Phone photos are often 4000px and 5 to 8 MB. The AI only needs about 1600px (and rejects images over
-// 5 MB), and smaller files upload much faster, so photos are scaled down and saved as JPEG first.
 const MAX_SIDE = 1600;
 const JPEG_QUALITY = 0.82;
 

@@ -75,10 +75,6 @@ export async function api<T = any>(path: string, opts: Options = {}): Promise<T>
 
 export type LocalFile = { uri: string; name: string; type: string };
 
-// Adds a local file (photo, video, voice note) to a multipart form.
-// The global fetch is Expo's fetch, which does not accept React Native's old { uri, name, type }
-// form parts. Phones send an expo-file-system File (a Blob read from disk); the web preview sends
-// a Blob fetched from the blob: URL. The file's extension tells the server what kind of file it is.
 export async function appendFile(form: FormData, field: string, file: LocalFile): Promise<void> {
   if (Platform.OS === 'web') {
     const blob = await (await fetch(file.uri)).blob();
@@ -88,9 +84,6 @@ export async function appendFile(form: FormData, field: string, file: LocalFile)
   form.append(field, (await namedFile(file)) as unknown as Blob);
 }
 
-// Expo's fetch sends the file's name on disk (a random cache name for picked photos) and it cannot be
-// overridden, but the server uses the name (bulk upload turns "blue_pouch.jpg" into "Blue pouch").
-// So the file is copied into a temporary cache folder under the name the seller sees.
 async function namedFile(file: LocalFile): Promise<File> {
   const source = new File(file.uri);
   const name = file.name.replace(/[\\/]/g, '_');
