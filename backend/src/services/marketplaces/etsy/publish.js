@@ -1,13 +1,13 @@
 // Sends a listing to Etsy, either as a draft or published (active).
-import { LISTING_STATUS } from '../config/constants.js';
-import { store } from '../db/index.js';
-import { HttpError, conflict, notFound } from '../utils/errors.js';
-import { now } from '../utils/parse.js';
-import { hasBlockingIssues, validateListing } from '../validators/listing.validator.js';
-import { etsyConfigured, pushListingToEtsy } from './etsy/index.js';
-import { hydrate } from './media.service.js';
-import { assertNotGenerating, getListingOrThrow, updateListing } from './listing.repository.js';
-import { isLive } from './marketplace.service.js';
+import { LISTING_STATUS } from '../../../config/constants.js';
+import { store } from '../../../db/index.js';
+import { HttpError, conflict, notFound } from '../../../utils/errors.js';
+import { now } from '../../../utils/parse.js';
+import { hasBlockingIssues, validateListing } from '../../../validators/listing.validator.js';
+import { etsyConfigured, pushListingToEtsy } from './index.js';
+import { hydrate } from '../../media.service.js';
+import { assertNotGenerating, getListingOrThrow, updateListing } from '../../listing.repository.js';
+import { isLive } from '../status.js';
 
 // Copies Etsy image IDs from the pushed copy, so a retry does not upload the same photos again.
 function keepEtsyImageIds(listing, pushed) {
@@ -27,7 +27,7 @@ async function assertReadyToPublish(userId) {
 
 // state: 'active' publishes, anything else saves a draft on Etsy.
 // Validation problems throw a 422; an Etsy failure is recorded on the listing and thrown as a 502.
-export async function publishListing(userId, listingId, { state }) {
+export async function publishToEtsy(userId, listingId, { state }) {
   const listing = await getListingOrThrow(userId, listingId);
   assertNotGenerating(listing, 'Wait for generation to finish before publishing.');
   await assertReadyToPublish(userId);

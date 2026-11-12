@@ -1,9 +1,12 @@
-import * as etsyConnection from '../services/etsyConnection.service.js';
-import { etsyConfigured, searchTaxonomy } from '../services/etsy/index.js';
-import { requireAuth } from '../middleware/auth.js';
-import { config } from '../config/index.js';
-import { assertCallbackReachable, publicOrigin } from '../services/connectLinks.js';
-import { log } from '../utils/logger.js';
+import * as etsyConnection from "../services/marketplaces/etsy/connection.js";
+import { etsyConfigured, searchTaxonomy } from "../services/marketplaces/etsy/index.js";
+import { requireAuth } from "../middleware/auth.js";
+import { config } from "../config/index.js";
+import {
+  assertCallbackReachable,
+  publicOrigin,
+} from "../services/connectLinks.js";
+import { log } from "../utils/logger.js";
 
 export async function status(req, res) {
   res.json(await etsyConnection.getStatus(req.user.id));
@@ -11,8 +14,14 @@ export async function status(req, res) {
 
 // Mobile: returns a one-time link to the connect page, on the address the phone reached us on.
 export function connectUrl(req, res) {
-  assertCallbackReachable(req, config.etsy.redirectUri, 'Etsy');
-  res.json({ url: etsyConnection.createConnectUrl(req.user.id, req.body?.returnTo, publicOrigin(req)) });
+  assertCallbackReachable(req, config.etsy.redirectUri, "Etsy");
+  res.json({
+    url: etsyConnection.createConnectUrl(
+      req.user.id,
+      req.body?.returnTo,
+      publicOrigin(req),
+    ),
+  });
 }
 
 // Opened by the app's in-app browser with a one-time ticket (or a Bearer token). Errors are plain text.
@@ -30,26 +39,40 @@ export async function authenticateConnect(req, res, next) {
 
 export async function connect(req, res) {
   if (!etsyConfigured()) {
-    const message = encodeURIComponent('Add ETSY_API_KEY to your .env file first.');
-    return res.redirect(etsyConnection.returnUrl(req.returnTo, `etsy=error&message=${message}`));
+    const message = encodeURIComponent(
+      "Add ETSY_API_KEY to your .env file first.",
+    );
+    return res.redirect(
+      etsyConnection.returnUrl(req.returnTo, `etsy=error&message=${message}`),
+    );
   }
   res.redirect(await etsyConnection.startConnect(req.user.id, req.returnTo));
 }
 
 // Etsy redirects here after the user approves (or declines). Always redirects back to the app.
 export async function callback(req, res) {
-  const state = String(req.query.state || '');
+  const state = String(req.query.state || "");
   const returnTo = etsyConnection.returnToFromState(state);
-  const back = (query) => res.redirect(etsyConnection.returnUrl(returnTo, query));
-  const fail = (message) => back(`etsy=error&message=${encodeURIComponent(message)}`);
+  const back = (query) =>
+    res.redirect(etsyConnection.returnUrl(returnTo, query));
+  const fail = (message) =>
+    back(`etsy=error&message=${encodeURIComponent(message)}`);
 
-  if (req.query.error) return fail(String(req.query.error_description || req.query.error));
+  if (req.query.error)
+    return fail(String(req.query.error_description || req.query.error));
   try {
-    const warning = await etsyConnection.completeConnect(state, String(req.query.code || ''));
-    back(warning ? `etsy=connected&warning=${encodeURIComponent(warning)}` : 'etsy=connected');
+    const warning = await etsyConnection.completeConnect(
+      state,
+      String(req.query.code || ""),
+    );
+    back(
+      warning
+        ? `etsy=connected&warning=${encodeURIComponent(warning)}`
+        : "etsy=connected",
+    );
   } catch (err) {
-    log.error('etsy', 'Connect callback failed', { err });
-    fail(err.message || 'Could not connect to Etsy.');
+    log.error("etsy", "Connect callback failed", { err });
+    fail(err.message || "Could not connect to Etsy.");
   }
 }
 

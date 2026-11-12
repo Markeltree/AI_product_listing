@@ -1,6 +1,6 @@
 // Builds an eBay listing from a Velista listing and sends it through the Inventory API:
 // photos -> inventory item (title, description, item specifics) -> offer (price, policies) -> publish.
-import { config } from '../../config/index.js';
+import { config } from '../../../config/index.js';
 import { EbayError } from './oauth.js';
 import {
   categoryAspects, ebayDescription, ebayTitle, itemUrl, publishOffer, putInventoryItem, skuFor, suggestCategories,

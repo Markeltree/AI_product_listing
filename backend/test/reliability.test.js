@@ -30,7 +30,7 @@ Object.assign(process.env, {
 
 const { initStore, store } = await import('../src/db/index.js');
 const { config } = await import('../src/config/index.js');
-const { etsyRequest } = await import('../src/services/etsy/client.js');
+const { etsyRequest } = await import('../src/services/marketplaces/etsy/client.js');
 const { signup } = await import('../src/services/auth.service.js');
 const { encryptSecret, decryptSecret } = await import('../src/utils/secrets.js');
 const { fetchWithRetry } = await import('../src/utils/http.js');

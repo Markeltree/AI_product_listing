@@ -1,6 +1,6 @@
 // Fills eBay item specifics (aspects) for a category from what Velista already knows about the
 // product. Required aspects that are still missing are asked of the AI, limited to eBay's allowed values.
-import { askAiJson } from '../ai/index.js';
+import { askAiJson } from '../../ai/index.js';
 
 const norm = (s) => String(s || '').trim().toLowerCase();
 const list = (v) => (Array.isArray(v) ? v : String(v || '').split(','))

@@ -1,19 +1,19 @@
 // Connecting a user's Etsy shop: OAuth start and callback, mobile tickets, status and shop refresh.
-import { config } from '../config/index.js';
-import { OAUTH_STATE_TTL_MS } from '../config/constants.js';
-import { store } from '../db/index.js';
-import { conflict } from '../utils/errors.js';
-import { now } from '../utils/parse.js';
-import { createTicketUrl, donePageUrl, encodeState, userFromTicket as userFromTicketFor } from './connectLinks.js';
+import { config } from '../../../config/index.js';
+import { OAUTH_STATE_TTL_MS } from '../../../config/constants.js';
+import { store } from '../../../db/index.js';
+import { conflict } from '../../../utils/errors.js';
+import { now } from '../../../utils/parse.js';
+import { createTicketUrl, donePageUrl, encodeState, userFromTicket as userFromTicketFor } from '../../connectLinks.js';
 import {
   buildAuthorizeUrl, createPkcePair, etsyConfigured, exchangeCodeForTokens, fetchShippingProfiles, fetchShopForUser,
   tokensToConnection,
-} from './etsy/index.js';
+} from './index.js';
 
 const TICKET_PURPOSE = 'etsy-connect';
 
 // Return targets, tickets and state encoding are shared with eBay (connectLinks.js).
-export { returnToFromState, returnUrl, safeReturnTo } from './connectLinks.js';
+export { returnToFromState, returnUrl, safeReturnTo } from '../../connectLinks.js';
 
 // ---------- mobile ticket ----------
 

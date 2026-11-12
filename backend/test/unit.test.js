@@ -9,7 +9,7 @@ import { reorderImages } from '../src/services/media.service.js';
 import { clean } from '../src/utils/text.js';
 import { hashPassword, verifyPassword } from '../src/utils/password.js';
 import { createSessionToken, readSessionToken } from '../src/utils/session.js';
-import { createPkcePair, buildAuthorizeUrl } from '../src/services/etsy/index.js';
+import { createPkcePair, buildAuthorizeUrl } from '../src/services/marketplaces/etsy/index.js';
 import { DEFAULT_SETTINGS, TAG_MAX_COUNT, TAG_MAX_LENGTH, TITLE_MAX } from '../src/config/constants.js';
 
 const baseListing = (overrides = {}) => ({

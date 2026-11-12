@@ -10,7 +10,7 @@ import { config } from '../config/index.js';
 import { LISTING_STATUS } from '../config/constants.js';
 import { store } from '../db/index.js';
 import { resumeInterruptedGenerations, runGeneration, startGeneration } from '../services/generation.service.js';
-import { runSync, startSyncLoop } from '../services/marketplace.service.js';
+import { runSync, startSyncLoop } from '../services/marketplaces/sync.js';
 import { redis, redisEnabled } from './redis.js';
 import { log } from '../utils/logger.js';
 

@@ -1,9 +1,9 @@
 // Etsy OAuth 2.0 with PKCE: authorize URL, code exchange and token refresh.
 // Docs: https://developers.etsy.com/documentation/essentials/authentication
 import crypto from 'node:crypto';
-import { config } from '../../config/index.js';
-import { HttpError } from '../../utils/errors.js';
-import { fetchWithRetry } from '../../utils/http.js';
+import { config } from '../../../config/index.js';
+import { HttpError } from '../../../utils/errors.js';
+import { fetchWithRetry } from '../../../utils/http.js';
 
 export class EtsyError extends HttpError {}
 

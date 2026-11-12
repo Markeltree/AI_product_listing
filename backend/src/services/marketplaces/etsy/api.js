@@ -2,7 +2,7 @@
 // and creating, updating and publishing listings with images.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { store } from '../../db/index.js';
+import { store } from '../../../db/index.js';
 import { EtsyError, assertEtsyConfigured } from './oauth.js';
 import { etsyRequest } from './client.js';
 

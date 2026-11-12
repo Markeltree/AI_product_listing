@@ -1,7 +1,7 @@
 // Generic eBay REST request helper. Refreshes the seller's access token when it is about to expire.
-import { config } from '../../config/index.js';
-import { store } from '../../db/index.js';
-import { isGrantRejected, refreshOnce } from '../tokenRefresh.js';
+import { config } from '../../../config/index.js';
+import { store } from '../../../db/index.js';
+import { isGrantRejected, refreshOnce } from '../../tokenRefresh.js';
 import {
   EbayError, assertEbayConfigured, ebayFetch, getAppToken, refreshTokens, tokensToConnection,
 } from './oauth.js';

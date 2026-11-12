@@ -119,7 +119,7 @@ step(`phone + localhost callback -> 409: "${phone.json.error.slice(0, 90)}…"`)
 // ---------- invite link: a shop owner connects with no Velista login ----------
 {
   const { createInviteUrl } =
-    await import("../src/services/etsyConnection.service.js");
+    await import("../src/services/marketplaces/etsy/connection.js");
   const me = (await call("GET", "/api/auth/me")).json.user;
   let url = createInviteUrl(me.id, 48);
   for (let i = 0; i < 6 && !url.includes("/api/connect/done"); i++) {

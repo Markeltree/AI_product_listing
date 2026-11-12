@@ -1,5 +1,5 @@
 // Listing lifecycle: create (single or bulk) -> generate in the background -> edit -> delete.
-// Publishing lives in publish.service.js.
+// Publishing lives in services/marketplaces/<marketplace>/publish.js.
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';

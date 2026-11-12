@@ -1,6 +1,6 @@
-import * as ebayConnection from '../services/ebayConnection.service.js';
+import * as ebayConnection from '../services/marketplaces/ebay/connection.js';
 import { assertCallbackReachable, publicOrigin, returnToFromState, returnUrl, safeReturnTo } from '../services/connectLinks.js';
-import { ebayConfigured, suggestCategories } from '../services/ebay/index.js';
+import { ebayConfigured, suggestCategories } from '../services/marketplaces/ebay/index.js';
 import { requireAuth } from '../middleware/auth.js';
 import { log } from '../utils/logger.js';
 

@@ -1,8 +1,10 @@
 import * as listingService from '../services/listing.service.js';
 import { getListingOrThrow } from '../services/listing.repository.js';
 import { listingDir, safeMediaPath } from '../services/media.service.js';
-import { publishListing } from '../services/publish.service.js';
-import { delistListing, publishToEbay, runSync } from '../services/marketplace.service.js';
+import { publishToEtsy } from '../services/marketplaces/etsy/publish.js';
+import { publishToEbay } from '../services/marketplaces/ebay/publish.js';
+import { delistListing } from '../services/marketplaces/delist.js';
+import { runSync } from '../services/marketplaces/sync.js';
 import path from 'node:path';
 import { analyzeProduct, extractVideoFrames } from '../services/ai/index.js';
 import { getUserSettings } from '../services/settings.service.js';
@@ -128,7 +130,7 @@ export async function remove(req, res) {
 
 export async function publish(req, res) {
   const state = req.body?.state === 'active' ? 'active' : 'draft';
-  res.json(await publishListing(req.user.id, req.params.id, { state }));
+  res.json(await publishToEtsy(req.user.id, req.params.id, { state }));
 }
 
 export async function publishEbay(req, res) {

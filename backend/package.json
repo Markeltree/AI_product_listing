@@ -1,7 +1,7 @@
 {
   "name": "velista-listing-ai",
   "version": "1.0.0",
-  "description": "AI-powered Etsy listing generator with direct Etsy Open API v3 publishing",
+  "description": "Velista API: AI listing generation, publishing to Etsy and eBay, and cross-delisting",
   "private": true,
   "type": "module",
   "main": "src/index.js",
@@ -11,7 +11,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node --test test/unit.test.js test/security.test.js test/reliability.test.js test/listings.test.js test/notifications.test.js",
+    "test": "node --test test/unit.test.js test/security.test.js test/reliability.test.js test/listings.test.js test/notifications.test.js test/marketplaces.test.js",
     "etsy:invite": "node src/scripts/etsy-invite.js",
     "test:crosslist": "node test/crosslist-e2e.mjs",
     "mock:etsy": "node test/mock-etsy/server.mjs",

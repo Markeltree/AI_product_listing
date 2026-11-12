@@ -162,3 +162,15 @@ test('bulk uploads stay quiet', async () => {
   await new Promise((resolve) => { setTimeout(resolve, 200); });
   assert.equal(sent.length, 0);
 });
+
+test('the test button sends to this seller only, and explains problems', async () => {
+  assert.equal((await call('POST', '/api/notifications/test')).status, 409);
+  await store.savePushToken({ token: TOKEN, userId, platform: 'android' });
+  const ok = await call('POST', '/api/notifications/test');
+  assert.equal(ok.status, 200);
+  assert.equal(sent.at(-1).title, 'Velista notifications work');
+  tickets = [{ status: 'error', message: 'bad', details: { error: 'InvalidCredentials' } }];
+  const bad = await call('POST', '/api/notifications/test');
+  assert.equal(bad.status, 502);
+  assert.match((await bad.json()).error, /InvalidCredentials/);
+});

@@ -1,17 +1,17 @@
 // Connecting a seller's eBay account: OAuth start and callback, mobile tickets, status, and the
 // one-time listing setup (business policies, ship-from location, item condition).
-import { config } from '../config/index.js';
-import { EBAY_CONDITIONS, OAUTH_STATE_TTL_MS } from '../config/constants.js';
-import { store } from '../db/index.js';
-import { badRequest, conflict } from '../utils/errors.js';
-import { now } from '../utils/parse.js';
-import { clean } from '../utils/text.js';
-import { createTicketUrl, encodeState, userFromTicket as userFromTicketFor } from './connectLinks.js';
+import { config } from '../../../config/index.js';
+import { EBAY_CONDITIONS, OAUTH_STATE_TTL_MS } from '../../../config/constants.js';
+import { store } from '../../../db/index.js';
+import { badRequest, conflict } from '../../../utils/errors.js';
+import { now } from '../../../utils/parse.js';
+import { clean } from '../../../utils/text.js';
+import { createTicketUrl, encodeState, userFromTicket as userFromTicketFor } from '../../connectLinks.js';
 import {
   buildAuthorizeUrl, createLocation, ebayConfigured, exchangeCodeForTokens, fetchEbayUser, fetchLocations, fetchPolicies,
   setupProblem, tokensToConnection,
-} from './ebay/index.js';
-import { log } from '../utils/logger.js';
+} from './index.js';
+import { log } from '../../../utils/logger.js';
 
 const TICKET_PURPOSE = 'ebay-connect';
 export const callbackUrl = () => `${config.appUrl}/api/ebay/callback`;

@@ -9,8 +9,8 @@
 // can connect an Etsy shop to that account.
 import { config } from "../config/index.js";
 import { initStore, store } from "../db/index.js";
-import { etsyConfigured } from "../services/etsy/index.js";
-import { createInviteUrl } from "../services/etsyConnection.service.js";
+import { etsyConfigured } from "../services/marketplaces/etsy/index.js";
+import { createInviteUrl } from "../services/marketplaces/etsy/connection.js";
 
 const [email, hoursArg] = process.argv.slice(2);
 const hours = Math.min(168, Math.max(1, Number(hoursArg) || 48));

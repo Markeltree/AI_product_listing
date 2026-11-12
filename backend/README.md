@@ -84,14 +84,18 @@ src/
   services/
     listing.service.js           Create, edit, regenerate, delete listings and media
     generation.service.js        Background generation: video frames, transcript, AI copy
-    publish.service.js           Etsy draft and publish
-    marketplace.service.js       eBay publish, ending listings, cross-delist sync
-    etsyConnection.service.js    Etsy OAuth, invite links, shop status
-    ebayConnection.service.js    eBay OAuth, policies and location setup
+    notifications.service.js     Push alerts to the seller's phones (Expo)
     connectLinks.js              Shared OAuth tickets, return targets, reachability checks
     ai/                          Claude/OpenAI calls, prompts, ffmpeg frames, template fallback
-    etsy/                        Etsy API client
-    ebay/                        eBay API client, listing builder, item specifics
+    marketplaces/
+      index.js                   The list of marketplaces and the adapter shape
+      sync.js                    Cross-delist sync for any number of marketplaces
+      delist.js                  Manual "End listing" on one or all marketplaces
+      etsy/  ebay/               One folder per marketplace:
+        client.js, api.js          API calls (and listing.js, aspects.js for eBay)
+        oauth.js, connection.js    Sign-in, tokens, connection status and setup
+        publish.js                 Send a listing as a draft or live
+        adapter.js                 Check state, end, set quantity, used by sync and delist
   validators/         Input checks and sanitizers
   middleware/         Auth, uploads, CORS, rate limiting, errors
   db/                 Supabase or SQLite behind one interface
@@ -103,6 +107,14 @@ test/
   crosslist-e2e.mjs   npm run test:crosslist: connect, publish to both, simulate sales, sync
   mock-etsy/, mock-ebay/   Local stand-ins for the marketplace APIs
 ```
+
+## Adding a marketplace
+
+1. Make `src/services/marketplaces/<name>/` with the same files as `etsy/`: `client.js` and `api.js` for the API calls, `oauth.js` and `connection.js` for connecting a seller, `publish.js`, and `adapter.js`.
+2. The adapter has the shape described at the top of `src/services/marketplaces/index.js`: `getState`, `end` and `setQuantity`. Add it to `MARKETPLACES` there. Sync and "End listing" then cover it with no other changes.
+3. Store the listing's details for it under `listing.<name>` (`listingId`, `state`, `publishedAt`), like `listing.etsy`.
+4. Add its routes and controller, a connection table in `supabase/schema.sql` and `db/`, and a card in the app's Settings.
+5. Add a mock in `test/` and extend `crosslist-e2e.mjs`.
 
 ## Security
 

@@ -2,8 +2,8 @@
 // photo upload, and creating, publishing, checking and ending listings through the Inventory API.
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { config } from '../../config/index.js';
-import { EBAY_TITLE_MAX } from '../../config/constants.js';
+import { config } from '../../../config/index.js';
+import { EBAY_TITLE_MAX } from '../../../config/constants.js';
 import { EbayError } from './oauth.js';
 import { ebayRequest } from './client.js';
 

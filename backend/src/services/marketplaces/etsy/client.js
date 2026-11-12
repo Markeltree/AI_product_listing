@@ -1,7 +1,7 @@
 // Generic Etsy Open API v3 request helper. Refreshes the user's access token when it is about to expire.
-import { config } from '../../config/index.js';
-import { store } from '../../db/index.js';
-import { isGrantRejected, refreshOnce } from '../tokenRefresh.js';
+import { config } from '../../../config/index.js';
+import { store } from '../../../db/index.js';
+import { isGrantRejected, refreshOnce } from '../../tokenRefresh.js';
 import {
   EtsyError, assertEtsyConfigured, etsyFetch, refreshTokens, tokensToConnection,
 } from './oauth.js';

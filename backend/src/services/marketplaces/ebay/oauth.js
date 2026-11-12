@@ -1,9 +1,9 @@
 // eBay OAuth 2.0 (authorization code grant): authorize URL, code exchange, refresh, and the
 // application token used for public APIs such as Taxonomy.
 // Docs: https://developer.ebay.com/api-docs/static/oauth-authorization-code-grant.html
-import { config } from '../../config/index.js';
-import { HttpError } from '../../utils/errors.js';
-import { fetchWithRetry } from '../../utils/http.js';
+import { config } from '../../../config/index.js';
+import { HttpError } from '../../../utils/errors.js';
+import { fetchWithRetry } from '../../../utils/http.js';
 
 export class EbayError extends HttpError {}
 
